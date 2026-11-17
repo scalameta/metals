@@ -2,9 +2,9 @@ package scala.meta.internal.metals
 
 import scala.util.control.NonFatal
 
+import scala.meta.inputs as m
 import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.GoogleJavaFormatStyle
-import scala.meta.inputs as m
 
 import com.google.common.collect.Range
 import com.google.googlejavaformat.java.Formatter

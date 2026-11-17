@@ -1,8 +1,8 @@
 package scala.meta.internal.metals
 
+import java.util as ju
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.TimeUnit
-import java.util as ju
 
 import scala.build.bsp.WrappedSourceItem
 import scala.collection.mutable
@@ -35,8 +35,8 @@ import scala.meta.io.AbsolutePath
 import scala.meta.metals.MetalsLanguageServer
 
 import ch.epfl.scala.bsp4j as b
-import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j as l
+import org.eclipse.lsp4j.Position
 
 // todo https://github.com/scalameta/metals/issues/4788
 // clean () =>, use plain values

@@ -7,6 +7,7 @@ import scala.concurrent.Future
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.*
@@ -14,7 +15,6 @@ import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.config.UserConfiguration
-import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
 
 import com.google.gson.JsonObject

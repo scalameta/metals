@@ -9,10 +9,10 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
 import com.google.gson.JsonElement
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintLabelPart
 import org.eclipse.lsp4j.TextDocumentIdentifier
-import org.eclipse.lsp4j as l
 
 final class InlayHintResolveProvider(
     definitionProvider: DefinitionProvider,

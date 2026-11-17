@@ -2,9 +2,9 @@ package scala.meta.internal.metals.mcp
 
 import java.nio.file.Path
 import java.util.Arrays
-import java.util.function.BiFunction
 import java.util.List as JList
 import java.util.Map as JMap
+import java.util.function.BiFunction
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future

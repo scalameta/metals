@@ -21,10 +21,10 @@ import scala.meta.pc.Node
 import scala.meta.pc.VirtualFileParams
 import scala.meta.tokens.*
 
+import org.eclipse.lsp4j.Position as LspPosition
 import org.eclipse.lsp4j.SemanticTokenModifiers
 import org.eclipse.lsp4j.SemanticTokenTypes
 import org.eclipse.lsp4j.SemanticTokens
-import org.eclipse.lsp4j.Position as LspPosition
 
 /**
  *  Provides semantic tokens of file

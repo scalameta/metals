@@ -4,10 +4,10 @@ import java.nio.file.Files
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments.*
-import scala.meta.internal.metals.BuildInfo as V
 
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.WorkspaceSymbolParams

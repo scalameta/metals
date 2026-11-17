@@ -41,6 +41,7 @@ import scala.meta.io.AbsolutePath
 
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.CodeAction
@@ -62,7 +63,6 @@ import org.eclipse.lsp4j.WorkDoneProgressCancelParams
 import org.eclipse.lsp4j.WorkDoneProgressCreateParams
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
-import org.eclipse.lsp4j as l
 import tests.TestOrderings.*
 import tests.TestingClient.normalizeData
 

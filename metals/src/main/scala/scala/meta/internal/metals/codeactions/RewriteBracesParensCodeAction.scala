@@ -13,8 +13,8 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 import scala.meta.tokens.Token
 
-import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j as l
+import org.eclipse.lsp4j.CodeActionParams
 
 /**
  * Rewrite parens to brackets and vice versa.

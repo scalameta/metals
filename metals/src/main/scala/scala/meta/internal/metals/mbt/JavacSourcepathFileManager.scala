@@ -2,8 +2,8 @@ package scala.meta.internal.metals.mbt
 
 import java.lang
 import java.nio.file.ClosedFileSystemException
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util as ju
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.tools.ForwardingJavaFileManager
 import javax.tools.JavaFileManager
 import javax.tools.JavaFileObject

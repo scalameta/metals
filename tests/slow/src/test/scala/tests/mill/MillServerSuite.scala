@@ -9,6 +9,7 @@ import scala.concurrent.duration.*
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.MillDigest
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.DebugSession
 import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
@@ -23,7 +24,6 @@ import scala.meta.internal.metals.StatusBarConfig
 import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
-import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind

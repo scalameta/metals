@@ -6,13 +6,13 @@ import scala.meta.internal.builds.MavenBuildTool
 import scala.meta.internal.builds.MavenDigest
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.io.InputStreamIO
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.*
 import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind

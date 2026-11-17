@@ -28,12 +28,12 @@ import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.Identifier
+import scala.meta.internal.semanticdb as s
 import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
-import scala.meta.internal.semanticdb as s
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 import scala.meta.tokens.Token.Ident
@@ -42,6 +42,7 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Range as LSPRange
 import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameFile
@@ -55,7 +56,6 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.messages.Either as LSPEither
-import org.eclipse.lsp4j.Range as LSPRange
 
 final class RenameProvider(
     mbtReferenceProvider: MbtReferenceProvider,

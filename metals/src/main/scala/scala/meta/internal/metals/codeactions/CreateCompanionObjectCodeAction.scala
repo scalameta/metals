@@ -17,9 +17,9 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j as l
 
 /**
  * It creates braceless or braceful companion objects for classes, traits, and enums

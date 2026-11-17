@@ -15,13 +15,13 @@ import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.semanticdb as s
 import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb.TypeRef
-import scala.meta.internal.semanticdb as s
 import scala.meta.io.AbsolutePath
 
-import org.eclipse.lsp4j.jsonrpc.messages.Either as JEither
 import org.eclipse.lsp4j as l
+import org.eclipse.lsp4j.jsonrpc.messages.Either as JEither
 
 final class MbtProtobufReferenceProvider(
     mbt: MbtWorkspaceSymbolProvider,

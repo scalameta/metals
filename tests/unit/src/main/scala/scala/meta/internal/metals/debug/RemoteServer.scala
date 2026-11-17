@@ -19,9 +19,9 @@ import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.debug.DebugProtocol
 
 import com.google.gson.JsonElement
+import org.eclipse.lsp4j.debug.*
 import org.eclipse.lsp4j.debug.Capabilities
 import org.eclipse.lsp4j.debug.OutputEventArguments
-import org.eclipse.lsp4j.debug.*
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugRequestMessage
 import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugResponseMessage

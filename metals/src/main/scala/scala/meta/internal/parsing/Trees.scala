@@ -19,9 +19,9 @@ import scala.meta.parsers.ParseException
 import scala.meta.parsers.Parsed
 import scala.meta.tokens.Tokens
 
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
-import org.eclipse.lsp4j as l
 
 /**
  * Manages parsing of Scala source files into Scalameta syntax trees.

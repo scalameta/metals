@@ -28,8 +28,8 @@ import scala.meta.io.AbsolutePath
 import bloop.config.Config.TestFramework
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.bsp4j.ScalaTestSuites
-import ch.epfl.scala.debugadapter.MultiOutputModule
 import ch.epfl.scala.debugadapter as dap
+import ch.epfl.scala.debugadapter.MultiOutputModule
 
 class MbtDebugSessionStarter(
     debugConfigCreator: DebugeeParamsCreator,

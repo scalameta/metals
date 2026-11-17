@@ -2,9 +2,9 @@ package tests
 
 import scala.collection.mutable
 
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.JsonParser
 import scala.meta.internal.metals.MetalsEnrichments.*
-import scala.meta.internal.metals.BuildInfo as V
 
 import munit.TestOptions
 import org.eclipse.lsp4j as l

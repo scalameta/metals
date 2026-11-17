@@ -14,9 +14,9 @@ import scala.meta.io.AbsolutePath
 import scala.meta.transversers.SimpleTraverser
 import scala.meta.trees.Origin
 
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.SymbolKind
-import org.eclipse.lsp4j as l
 
 /**
  *  Retrieves all the symbols defined in a document

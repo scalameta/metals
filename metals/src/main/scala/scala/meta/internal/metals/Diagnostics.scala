@@ -1,8 +1,8 @@
 package scala.meta.internal.metals
 
+import java.util as ju
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicReference
-import java.util as ju
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
@@ -19,10 +19,10 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.services.LanguageClient
-import org.eclipse.lsp4j as l
 
 private final case class CompilationStatus(
     code: bsp4j.StatusCode,

@@ -4,12 +4,12 @@ import scala.concurrent.Future
 
 import scala.meta.internal.builds.GradleBuildTool
 import scala.meta.internal.builds.GradleDigest
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.*
 import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind

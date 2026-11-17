@@ -10,6 +10,8 @@ import scala.meta.internal.metals.debug.DebugProxy.DebugMode
 
 import ch.epfl.scala.debugadapter.TestResultEvent
 import com.google.gson.JsonElement
+import org.eclipse.lsp4j as l
+import org.eclipse.lsp4j.debug as dap
 import org.eclipse.lsp4j.debug.CompletionsArguments
 import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
@@ -26,8 +28,6 @@ import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
-import org.eclipse.lsp4j.debug as dap
-import org.eclipse.lsp4j as l
 
 object DebugProtocol {
   import DapJsonParser.*

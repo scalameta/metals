@@ -15,8 +15,8 @@ import scala.meta.internal.metals.logging
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 
-import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j as l
+import org.eclipse.lsp4j.CodeActionParams
 
 class ExtractMethodCodeAction(
     trees: Trees,

@@ -5,13 +5,13 @@ import java.nio.file.Paths
 import scala.meta.*
 import scala.meta.dialects
 import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.config.UserConfiguration
-import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget

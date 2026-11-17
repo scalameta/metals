@@ -9,8 +9,8 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb as s
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Location

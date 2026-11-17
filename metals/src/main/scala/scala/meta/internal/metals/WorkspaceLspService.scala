@@ -2,9 +2,9 @@ package scala.meta.internal.metals
 
 import java.net.URI
 import java.nio.file.ProviderMismatchException
+import java.util as ju
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicReference
-import java.util as ju
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutorService
@@ -53,9 +53,9 @@ import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.MetalsSyncParams
 import scala.meta.metals.lsp.ScalaLspService
 
+import ch.epfl.scala.bsp4j as b
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.DebugSessionParams
-import ch.epfl.scala.bsp4j as b
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive

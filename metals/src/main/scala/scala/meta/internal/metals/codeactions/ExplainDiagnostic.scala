@@ -19,9 +19,9 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.Range
-import org.eclipse.lsp4j as l
 
 /**
  * Code action that provides detailed explanation for Scala 3 diagnostics

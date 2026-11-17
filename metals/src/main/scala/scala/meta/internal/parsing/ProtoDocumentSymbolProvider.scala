@@ -14,9 +14,9 @@ import scala.meta.internal.proto.parse.Parser
 import scala.meta.internal.proto.tree.Proto
 import scala.meta.io.AbsolutePath
 
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.SymbolKind
-import org.eclipse.lsp4j as l
 
 final class ProtoDocumentSymbolProvider(
     buffers: Buffers

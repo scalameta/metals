@@ -13,8 +13,8 @@ import scala.meta.inputs.Input
 import scala.meta.internal.jpc.JavaDiagnostics
 import scala.meta.internal.jpc.Positions
 import scala.meta.internal.jpc.SourceJavaFileObject
-import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 import com.sun.source.tree.AnnotationTree
@@ -30,11 +30,11 @@ import com.sun.source.util.TreePathScanner
 import com.sun.tools.javac.file.JavacFileManager
 import com.sun.tools.javac.parser.ParserFactory
 import com.sun.tools.javac.tree.JCTree
+import com.sun.tools.javac.tree.JCTree as JavacJCTree
 import com.sun.tools.javac.tree.JCTree.JCClassDecl
 import com.sun.tools.javac.tree.JCTree.JCMethodDecl
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl
 import com.sun.tools.javac.tree.JCTree.Tag
-import com.sun.tools.javac.tree.JCTree as JavacJCTree
 import com.sun.tools.javac.util.Context
 import com.sun.tools.javac.util.Log
 import com.sun.tools.javac.util.Name

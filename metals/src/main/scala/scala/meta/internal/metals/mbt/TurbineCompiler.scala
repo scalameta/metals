@@ -2,10 +2,10 @@ package scala.meta.internal.metals.mbt
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util as ju
 import java.util.Optional
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util as ju
 import javax.tools.JavaFileManager
 import javax.tools.JavaFileObject
 import javax.tools.StandardJavaFileManager

@@ -5,6 +5,7 @@ import java.nio.file.Files
 
 import scala.util.Properties
 
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.ListParametrizedCommand
 import scala.meta.internal.metals.Messages.NewScalaFile
@@ -15,7 +16,6 @@ import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
 import scala.meta.internal.metals.clients.language.RawMetalsReadClipboardResult
 import scala.meta.internal.metals.newScalaFile.NewFileTypes.*
-import scala.meta.internal.metals.BuildInfo as V
 
 import munit.Location
 import munit.TestOptions

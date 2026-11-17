@@ -6,6 +6,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.*
 
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JsonParser.*
 import scala.meta.internal.metals.Messages
@@ -20,7 +21,6 @@ import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.testProvider.TestExplorerEvent
-import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind

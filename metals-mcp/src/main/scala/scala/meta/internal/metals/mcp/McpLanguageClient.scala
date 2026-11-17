@@ -1,7 +1,7 @@
 package scala.meta.internal.metals.mcp
 
-import java.util.concurrent.CompletableFuture
 import java.util as ju
+import java.util.concurrent.CompletableFuture
 
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments.*

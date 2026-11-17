@@ -27,8 +27,8 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j as b
 import com.google.gson.JsonObject
-import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j as l
+import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 
 /**
  * Used to forward messages from the build server. Messages might

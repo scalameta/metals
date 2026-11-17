@@ -16,8 +16,8 @@ import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.Range as LspRange
+import org.eclipse.lsp4j.TextEdit
 
 trait AdjustLspData {
 

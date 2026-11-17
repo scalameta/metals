@@ -34,8 +34,8 @@ import scala.meta.io.RelativePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import coursierapi.error.DownloadingArtifactsError
-import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.lsp4j as l
+import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.scalafmt.dynamic.ScalafmtDynamicError
 import org.scalafmt.interfaces.PositionException
 import org.scalafmt.interfaces.Scalafmt

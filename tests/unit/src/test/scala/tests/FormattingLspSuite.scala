@@ -3,10 +3,10 @@ package tests
 import java.io.File
 
 import scala.meta.internal.jdk.CollectionConverters.*
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
-import scala.meta.internal.metals.BuildInfo as V
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive

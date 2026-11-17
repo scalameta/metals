@@ -3,8 +3,8 @@ package scala.meta.internal.metals.codeactions
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.Term
 import scala.meta.*
+import scala.meta.Term
 import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder

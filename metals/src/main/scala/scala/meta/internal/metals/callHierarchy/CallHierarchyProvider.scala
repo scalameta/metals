@@ -4,9 +4,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.Defn
+import scala.meta.internal.metals.*
 import scala.meta.internal.metals.JsonParser.*
 import scala.meta.internal.metals.MetalsEnrichments.*
-import scala.meta.internal.metals.*
 import scala.meta.internal.metals.mbt.MbtReferenceProvider
 import scala.meta.internal.parsing.JavaTrees
 import scala.meta.internal.parsing.Trees
@@ -15,6 +15,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
 import com.google.gson.JsonElement
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.CallHierarchyIncomingCall
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
 import org.eclipse.lsp4j.CallHierarchyItem
@@ -24,7 +25,6 @@ import org.eclipse.lsp4j.CallHierarchyPrepareParams
 import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
-import org.eclipse.lsp4j as l
 
 final case class CallHierarchyProvider(
     workspace: AbsolutePath,

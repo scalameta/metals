@@ -11,8 +11,8 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
-import java.util.concurrent.ScheduledExecutorService
 import java.util.List as juList
+import java.util.concurrent.ScheduledExecutorService
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
@@ -22,10 +22,10 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.*
+import scala.meta as m
 import scala.util.Failure
 import scala.util.Success
 import scala.util.matching.Regex
-import scala.meta as m
 
 import scala.meta.Input
 import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
@@ -66,13 +66,13 @@ import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.findfiles.*
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.semanticdb.Scala.Symbols
+import scala.meta.internal.semanticdb as s
 import scala.meta.internal.semanticdb.Scala.*
+import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.tvp.TreeViewChildrenParams
 import scala.meta.internal.tvp.TreeViewNodeCollapseDidChangeParams
 import scala.meta.internal.tvp.TreeViewProvider
 import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
-import scala.meta.internal.semanticdb as s
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
@@ -80,6 +80,7 @@ import ch.epfl.scala.bsp4j as b
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import munit.Tag
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.CallHierarchyIncomingCall
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
 import org.eclipse.lsp4j.CallHierarchyItem
@@ -129,7 +130,6 @@ import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceFolder
-import org.eclipse.lsp4j as l
 import tests.MetalsTestEnrichments.*
 import tests.TestOrderings.*
 

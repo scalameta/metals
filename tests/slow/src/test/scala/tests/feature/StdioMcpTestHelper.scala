@@ -4,8 +4,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.BuildInfo as V
+import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.io.AbsolutePath
 
 import tests.FileLayout

@@ -25,8 +25,8 @@ import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.lsp4j as l
+import org.eclipse.lsp4j.jsonrpc.CancelChecker
 
 /**
  * Implements workspace/symbol for both workspace sources and dependency classpath.

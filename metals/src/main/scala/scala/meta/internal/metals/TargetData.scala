@@ -2,8 +2,8 @@ package scala.meta.internal.metals
 
 import java.nio.file.Path
 import java.util
-import java.util.concurrent.ConcurrentLinkedQueue
 import java.util as ju
+import java.util.concurrent.ConcurrentLinkedQueue
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable

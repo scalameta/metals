@@ -11,9 +11,9 @@ import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.PositionSyntax.*
 import scala.meta.tokens.Token
 
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.FoldingRangeKind.*
-import org.eclipse.lsp4j as l
 
 final class FoldingRangeExtractor(
     distance: TokenEditDistance,

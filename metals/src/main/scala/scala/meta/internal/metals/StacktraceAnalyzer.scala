@@ -11,8 +11,8 @@ import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.StacktraceAnalyzer.*
 import scala.meta.io.AbsolutePath
 
-import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j as l
+import org.eclipse.lsp4j.Location
 
 class StacktraceAnalyzer(
     workspace: AbsolutePath,

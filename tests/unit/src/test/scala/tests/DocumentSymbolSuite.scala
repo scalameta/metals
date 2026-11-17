@@ -1,7 +1,7 @@
 package tests
 
-import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.BuildInfo as V
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.DocumentSymbolProvider

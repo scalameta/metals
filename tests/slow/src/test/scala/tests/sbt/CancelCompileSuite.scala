@@ -1,8 +1,8 @@
 package tests
 
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.BuildInfo as V
 
 import ch.epfl.scala.bsp4j.StatusCode
 

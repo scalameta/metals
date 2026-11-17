@@ -2,8 +2,8 @@ package scala.meta.internal.worksheets
 
 import scala.meta.internal.metals.MetalsEnrichments
 
-import mdoc.interfaces.EvaluatedWorksheetStatement
 import mdoc.interfaces as i
+import mdoc.interfaces.EvaluatedWorksheetStatement
 import org.eclipse.lsp4j as l
 
 object MdocEnrichments {

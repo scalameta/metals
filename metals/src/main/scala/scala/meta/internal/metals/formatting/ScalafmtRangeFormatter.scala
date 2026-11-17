@@ -1,7 +1,7 @@
 package scala.meta.internal.metals.formatting
 
-import java.util.concurrent.TimeoutException
 import java.util as ju
+import java.util.concurrent.TimeoutException
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt

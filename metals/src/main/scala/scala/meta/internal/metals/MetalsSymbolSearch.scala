@@ -1,8 +1,8 @@
 package scala.meta.internal.metals
 
 import java.net.URI
-import java.util.Optional
 import java.util as ju
+import java.util.Optional
 
 import scala.collection.concurrent.TrieMap
 

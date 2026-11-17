@@ -27,10 +27,10 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.FiniteDuration
+import scala.meta as m
 import scala.util.Properties
 import scala.util.Try
 import scala.util.control.NonFatal
-import scala.meta as m
 
 import scala.meta.Template
 import scala.meta.Term
@@ -43,11 +43,11 @@ import scala.meta.internal.metals.debug.DiscoveryFailures
 import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.EmptyResult
+import scala.meta.internal.semanticdb as s
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyTokenData
-import scala.meta.internal.semanticdb as s
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 import scala.meta.trees.Origin
@@ -57,10 +57,10 @@ import ch.epfl.scala.bsp4j as b
 import com.google.gson.Gson
 import fansi.ErrorMode
 import io.undertow.server.HttpServerExchange
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages
-import org.eclipse.lsp4j as l
 
 /**
  * One stop shop for all extension methods that are used in the metals build.

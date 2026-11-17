@@ -34,8 +34,8 @@ import scala.meta.internal.semanticdb.ValueSignature
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j as b
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j as l
 

@@ -43,9 +43,9 @@ import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
 
 import bloop.config.Config
+import ch.epfl.scala.bsp4j as b
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
-import ch.epfl.scala.bsp4j as b
 import org.eclipse.lsp4j as l
 
 final class TestSuitesProvider(

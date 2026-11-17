@@ -3,9 +3,9 @@ package scala.meta.internal.metals
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util as ju
 import java.util.concurrent.ScheduledExecutorService
 import java.util.function.Supplier
-import java.util as ju
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutorService

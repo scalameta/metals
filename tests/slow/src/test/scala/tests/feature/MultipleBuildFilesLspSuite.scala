@@ -2,9 +2,9 @@ package tests.feature
 
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.Messages.ChooseBuildTool
 import scala.meta.internal.metals.scalacli.ScalaCli
-import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
 
 import tests.BaseImportSuite

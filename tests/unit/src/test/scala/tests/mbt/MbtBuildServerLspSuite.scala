@@ -11,6 +11,7 @@ import scala.concurrent.Future
 import scala.jdk.CollectionConverters.*
 import scala.util.Properties
 
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.config.AutoImportBuildKind
@@ -23,7 +24,6 @@ import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.mbt.MbtDependencyModule
 import scala.meta.internal.metals.mbt.TurbineCompiler
-import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.mtags.ScalametaCommonEnrichments.*
 
 import com.google.turbine.diag.SourceFile

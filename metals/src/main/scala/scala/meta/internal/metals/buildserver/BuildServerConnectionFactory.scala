@@ -32,8 +32,8 @@ import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j.InitializeBuildResult
 import ch.epfl.scala.bsp4j.*
+import ch.epfl.scala.bsp4j.InitializeBuildResult
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer

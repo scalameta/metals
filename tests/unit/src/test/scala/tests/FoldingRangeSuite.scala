@@ -3,9 +3,9 @@ package tests
 import java.nio.file.Paths
 import java.util.UUID
 
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.TextEdits
-import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.io.AbsolutePath
 

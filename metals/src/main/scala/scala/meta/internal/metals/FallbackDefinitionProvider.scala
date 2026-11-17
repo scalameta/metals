@@ -2,9 +2,9 @@ package scala.meta.internal.metals
 
 import scala.util.control.NonFatal
 
+import scala.meta.*
 import scala.meta.Term
 import scala.meta.Type
-import scala.meta.*
 import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.GlobalSymbolIndex

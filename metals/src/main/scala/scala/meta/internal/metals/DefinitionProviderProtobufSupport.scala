@@ -15,8 +15,8 @@ import scala.meta.internal.metals.mbt.ProtoJavaSymbolMapper
 import scala.meta.internal.metals.mbt.ProtoJavaVirtualFile
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb as s
+import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Location

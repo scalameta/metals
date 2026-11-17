@@ -30,9 +30,9 @@ import scala.meta.io.AbsolutePath
 
 import com.typesafe.config.ConfigFactory
 import coursier.Dependency
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
-import org.eclipse.lsp4j as l
 import scalafix.interfaces.Scalafix
 import scalafix.interfaces.ScalafixDiagnostic
 import scalafix.interfaces.ScalafixEvaluation

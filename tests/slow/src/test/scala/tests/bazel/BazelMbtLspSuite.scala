@@ -3,6 +3,7 @@ package tests.bazel
 import scala.concurrent.duration.*
 
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments.*
@@ -12,7 +13,6 @@ import scala.meta.internal.metals.config.ReferenceProviderConfig
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.mbt.MbtBuildServer
-import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
 
 import tests.BaseLspSuite

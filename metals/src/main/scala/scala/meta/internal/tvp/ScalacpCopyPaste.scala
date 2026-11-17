@@ -7,14 +7,14 @@ import scala.reflect.NameTransformer
 import scala.tools.scalap.scalax.rules.scalasig.*
 
 import scala.meta.internal.scalacp.*
+import scala.meta.internal.semanticdb as s
+import scala.meta.internal.semanticdb.Language as l
 import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb.Scala.Descriptor as d
 import scala.meta.internal.semanticdb.Scala.DisplayNames as dn
 import scala.meta.internal.semanticdb.Scala.Names as n
 import scala.meta.internal.semanticdb.SymbolInformation.Kind as k
 import scala.meta.internal.semanticdb.SymbolInformation.Property as p
-import scala.meta.internal.semanticdb.Language as l
-import scala.meta.internal.semanticdb as s
 
 /**
  * This class contains copy-pasted code from scala.meta.internal.scalacp with minor changes.

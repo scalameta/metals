@@ -7,10 +7,10 @@ import scala.collection.concurrent.TrieMap
 
 import scala.meta.Dialect
 import scala.meta.dialects
+import scala.meta.internal.metals.*
 import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig.MetalsClientType
 import scala.meta.internal.metals.ReportContext
-import scala.meta.internal.metals.*
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.mtags.GlobalSymbolIndex

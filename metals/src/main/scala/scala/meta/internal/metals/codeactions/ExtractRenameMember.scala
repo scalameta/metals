@@ -30,9 +30,9 @@ import scala.meta.pc.CancelToken
 import scala.meta.tokens.Token
 import scala.meta.transversers.SimpleTraverser
 
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.WorkspaceEdit
-import org.eclipse.lsp4j as l
 
 class ExtractRenameMember(
     trees: Trees,

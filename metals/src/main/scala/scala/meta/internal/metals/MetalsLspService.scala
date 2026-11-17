@@ -81,13 +81,13 @@ import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
 import scala.meta.tokenizers.TokenizeException
 
-import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.bsp4j as b
+import ch.epfl.scala.bsp4j.CompileReport
 import com.google.common.collect.HashBiMap
-import org.eclipse.lsp4j.ExecuteCommandParams
-import org.eclipse.lsp4j.*
-import org.eclipse.lsp4j.jsonrpc.messages.Either as JEither
 import org.eclipse.lsp4j as l
+import org.eclipse.lsp4j.*
+import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j.jsonrpc.messages.Either as JEither
 
 /**
  * Metals implementation of the Scala Language Service.

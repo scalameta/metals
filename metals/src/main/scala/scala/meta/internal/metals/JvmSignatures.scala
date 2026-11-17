@@ -1,8 +1,8 @@
 package scala.meta.internal.metals
 import scala.annotation.tailrec
 
-import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala.*
+import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.SymbolOccurrence
 
 object JvmSignatures {

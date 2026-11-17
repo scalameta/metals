@@ -5,9 +5,9 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.URI
+import java.util as ju
 import java.util.Collections.singletonList
 import java.util.concurrent.TimeUnit
-import java.util as ju
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -63,10 +63,10 @@ import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.io.AbsolutePath
 
 import bloop.config.Config
+import ch.epfl.scala.bsp4j as b
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import ch.epfl.scala.bsp4j.ScalaMainClass
-import ch.epfl.scala.bsp4j as b
 import ch.epfl.scala.debugadapter as dap
 import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement

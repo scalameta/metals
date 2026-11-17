@@ -9,8 +9,8 @@ import scala.meta.internal.mtags
 import scala.meta.io.AbsolutePath
 
 import bloop.config.Config
-import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j as b
+import ch.epfl.scala.bsp4j.BuildTarget
 import org.eclipse.lsp4j as l
 
 final case class FullyQualifiedName(value: String) extends AnyVal

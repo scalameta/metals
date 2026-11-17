@@ -4,8 +4,8 @@ import java.io.UncheckedIOException
 
 import scala.collection.concurrent.TrieMap
 
-import scala.meta.Dialect
 import scala.meta.*
+import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Buffers

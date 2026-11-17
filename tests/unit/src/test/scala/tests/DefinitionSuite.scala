@@ -8,9 +8,9 @@ import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.semanticdb as s
 import scala.meta.internal.semanticdb.Implicits.*
 import scala.meta.internal.semanticdb.Scala.*
-import scala.meta.internal.semanticdb as s
 
 /**
  * Assert that every identifier has a definition and every non-identifier has no definition.

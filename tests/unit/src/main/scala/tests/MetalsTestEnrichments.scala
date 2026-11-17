@@ -37,9 +37,9 @@ import ch.epfl.scala.bsp4j.ScalacOptionsItem
 import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 import com.google.gson.Gson
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
-import org.eclipse.lsp4j as l
 
 /**
  *  Equivalent to scala.meta.internal.metals.MetalsEnrichments

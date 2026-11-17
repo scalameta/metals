@@ -14,8 +14,8 @@ import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j as b
+import ch.epfl.scala.bsp4j.BuildTarget
 
 class BuildTargetClassesFinder(
     buildTargets: BuildTargets,

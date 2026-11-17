@@ -31,8 +31,8 @@ import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.search.SymbolHierarchyOps.*
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.IntersectionType
-import scala.meta.internal.semanticdb.Scala.Descriptor.Method
 import scala.meta.internal.semanticdb.Scala.*
+import scala.meta.internal.semanticdb.Scala.Descriptor.Method
 import scala.meta.internal.semanticdb.Scope
 import scala.meta.internal.semanticdb.Signature
 import scala.meta.internal.semanticdb.StructuralType

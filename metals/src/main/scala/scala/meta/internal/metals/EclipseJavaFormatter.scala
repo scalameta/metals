@@ -5,10 +5,10 @@ import scala.util.Success
 import scala.util.Try
 import scala.xml.Node
 
+import scala.meta.inputs as m
 import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.io.AbsolutePath
-import scala.meta.inputs as m
 
 import org.eclipse.jdt.core.JavaCore
 import org.eclipse.jdt.core.ToolFactory
@@ -17,8 +17,8 @@ import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants
 import org.eclipse.jdt.internal.formatter.DefaultCodeFormatterOptions
 import org.eclipse.jface.text.BadLocationException
 import org.eclipse.jface.text.Document
-import org.eclipse.text.edits.MalformedTreeException
 import org.eclipse.lsp4j as l
+import org.eclipse.text.edits.MalformedTreeException
 
 final class EclipseJavaFormatter(
     buffers: Buffers,

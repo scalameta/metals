@@ -3,9 +3,9 @@ package tests.feature
 import java.net.URLEncoder
 import java.nio.file.Path
 
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.MetalsEnrichments.*
-import scala.meta.internal.metals.BuildInfo as V
 
 import munit.TestOptions
 import tests.BaseLspSuite

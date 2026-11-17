@@ -20,8 +20,8 @@ import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.utils.Timeout
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j as b
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 final class Compilations(
     buildTargets: BuildTargets,

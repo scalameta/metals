@@ -11,9 +11,9 @@ import scala.meta.internal.metals.newScalaFile.NewFileTemplate
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.Identifier
+import scala.meta.internal.semanticdb as s
 import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
-import scala.meta.internal.semanticdb as s
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier

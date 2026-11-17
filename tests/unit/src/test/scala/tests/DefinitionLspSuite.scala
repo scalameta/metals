@@ -2,10 +2,10 @@ package tests
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
-import scala.meta.internal.metals.BuildInfo as V
 
 class DefinitionLspSuite
     extends BaseLspSuite("definition")

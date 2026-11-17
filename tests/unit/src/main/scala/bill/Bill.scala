@@ -20,8 +20,8 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
-import scala.reflect.internal.util.BatchSourceFile
 import scala.reflect.internal.util as r
+import scala.reflect.internal.util.BatchSourceFile
 import scala.reflect.io.AbstractFile
 import scala.reflect.io.VirtualFile
 import scala.tools.nsc
@@ -38,8 +38,8 @@ import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.mtags
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j.*
 import ch.epfl.scala.bsp4j as b
+import ch.epfl.scala.bsp4j.*
 import com.google.gson.GsonBuilder
 import coursierapi.Dependency
 import org.eclipse.lsp4j.jsonrpc.Launcher

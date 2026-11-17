@@ -4,8 +4,8 @@ import java.util
 
 import scala.meta.internal.jdk.CollectionConverters.*
 
-import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j as l
+import org.eclipse.lsp4j.TextEdit
 
 object RangesTextEdits {
   def fromFoldingRanges(ranges: util.List[l.FoldingRange]): List[l.TextEdit] = {

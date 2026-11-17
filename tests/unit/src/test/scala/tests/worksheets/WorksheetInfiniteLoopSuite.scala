@@ -1,10 +1,10 @@
 package tests.worksheets
 
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.config.UserConfiguration
-import scala.meta.internal.metals.BuildInfo as V
 
 import tests.BaseLspSuite
 

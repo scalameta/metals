@@ -13,8 +13,8 @@ import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala.*
 
-import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j as l
+import org.eclipse.lsp4j.TextDocumentPositionParams
 
 final class GotoTestCodeLens(
     buffers: Buffers,

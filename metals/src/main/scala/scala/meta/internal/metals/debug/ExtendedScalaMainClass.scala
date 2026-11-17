@@ -12,8 +12,8 @@ import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.bsp4j as b
+import ch.epfl.scala.bsp4j.ScalaMainClass
 
 /**
  * Wrapper around the bsp4j.ScalaMainClass to provide additional information which may be used by client.

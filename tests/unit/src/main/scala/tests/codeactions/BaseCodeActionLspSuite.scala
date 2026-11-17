@@ -2,8 +2,8 @@ package tests.codeactions
 
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.BuildInfo as V
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 import munit.Location
 import munit.TestOptions
