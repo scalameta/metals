@@ -53,6 +53,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  *                             to stop before reconnecting anyway.
  * @param debuggeeGracePeriod Grace period in seconds for the debuggee to start.
  * @param maxMcpSearchResults The maximum number of results a single MCP symbol search returns.
+ * @param maxMcpCompileDiagnostics The maximum number of diagnostics a single MCP compile tool returns.
  */
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
@@ -154,6 +155,10 @@ final case class MetalsServerConfig(
       "metals.max-mcp-search-results",
       default = 100,
     ),
+    maxMcpCompileDiagnostics: Int = MetalsServerConfig.intProperty(
+      "metals.max-mcp-compile-diagnostics",
+      default = 10,
+    ),
 ) {
   override def toString: String =
     List[String](
@@ -184,6 +189,7 @@ final case class MetalsServerConfig(
       s"folding-range-minimum-span=$foldingRageMinimumSpan",
       s"disable-show-message-request=$disableShowMessageRequest",
       s"max-mcp-search-results=$maxMcpSearchResults",
+      s"max-mcp-compile-diagnostics=$maxMcpCompileDiagnostics",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {

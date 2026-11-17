@@ -68,6 +68,7 @@ trait MetalsMcpTools extends Cancelable {
   protected def scalafmtRunner: ScalafmtRunner
   protected def scalafixLlmRuleProvider: ScalafixLlmRuleProvider
   protected def indexingPromise: Promise[Unit]
+  protected def maxCompileDiagnostics: Int
   protected implicit def ec: ExecutionContext
 
   // Shared mutable state
@@ -183,7 +184,8 @@ trait MetalsMcpTools extends Cancelable {
             .cascadeCompile(allTargets)
             .map { _ =>
               val allDiagnostics = diagnostics.allDiagnostics
-              val diagnosticsOutput = allDiagnostics.show(projectPath)
+              val diagnosticsOutput =
+                allDiagnostics.show(projectPath, maxCompileDiagnostics)
               val content =
                 if (diagnosticsOutput.isEmpty) {
                   "Compilation successful."
@@ -232,7 +234,8 @@ trait MetalsMcpTools extends Cancelable {
 
               def inFileErrors = {
                 val fileDiagnostics = diagnostics.forFile(path)
-                val diagnosticsOutput = fileDiagnostics.show()
+                val diagnosticsOutput =
+                  fileDiagnostics.show(maxCompileDiagnostics)
                 if (diagnosticsOutput.isEmpty) None
                 else {
                   val prefix = if (fileDiagnostics.hasErrors) {
@@ -394,7 +397,7 @@ trait MetalsMcpTools extends Cancelable {
     if (
       moduleDiagnostics.nonEmpty && (moduleDiagnostics.hasErrors || moduleDiagnostics.hasWarnings)
     ) {
-      Some(moduleDiagnostics.show(projectPath))
+      Some(moduleDiagnostics.show(projectPath, maxCompileDiagnostics))
     } else None
   }
 

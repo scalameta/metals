@@ -88,15 +88,10 @@ object McpPrinter {
   implicit class XtensionDiagnosticsWithPath(
       diagnostics: Seq[(AbsolutePath, Diagnostic)]
   ) {
-    def show(projectRoot: AbsolutePath): String =
-      diagnostics
-        .collect {
-          case (path, diag)
-              if diag.getSeverity() == DiagnosticSeverity.Error ||
-                diag.getSeverity() == DiagnosticSeverity.Warning =>
-            s"${path.toRelative(projectRoot)} ${showDiagnostic(diag)}"
-        }
-        .mkString("\n")
+    def show(projectRoot: AbsolutePath, limit: Int): String =
+      showCapped(diagnostics, limit)(_._2) { case (path, diag) =>
+        s"${path.toRelative(projectRoot)} ${showDiagnostic(diag)}"
+      }
 
     def hasErrors: Boolean = diagnostics.exists { case (_, diag) =>
       diag.getSeverity() == DiagnosticSeverity.Error
@@ -110,15 +105,8 @@ object McpPrinter {
   implicit class XtensionDiagnostics(
       diagnostics: Seq[Diagnostic]
   ) {
-    def show(): String =
-      diagnostics
-        .collect {
-          case diag
-              if diag.getSeverity() == DiagnosticSeverity.Error ||
-                diag.getSeverity() == DiagnosticSeverity.Warning =>
-            showDiagnostic(diag)
-        }
-        .mkString("\n")
+    def show(limit: Int): String =
+      showCapped(diagnostics, limit)(identity)(showDiagnostic)
 
     def hasErrors: Boolean = diagnostics.exists(
       _.getSeverity() == DiagnosticSeverity.Error
@@ -127,6 +115,25 @@ object McpPrinter {
     def hasWarnings: Boolean = diagnostics.exists(
       _.getSeverity() == DiagnosticSeverity.Warning
     )
+  }
+
+  private def showCapped[A](entries: Seq[A], limit: Int)(
+      toDiagnostic: A => Diagnostic
+  )(render: A => String): String = {
+    val relevant = entries
+      .filter { entry =>
+        val severity = toDiagnostic(entry).getSeverity()
+        severity == DiagnosticSeverity.Error ||
+        severity == DiagnosticSeverity.Warning
+      }
+      // Errors first, so the cap never hides them behind warnings.
+      .sortBy(toDiagnostic(_).getSeverity().getValue())
+    val shown = relevant.take(limit.max(1))
+    val output = shown.map(render).mkString("\n")
+    if (relevant.size > shown.size)
+      s"$output\n\n[Showing ${shown.size} of ${relevant.size} errors and warnings. " +
+        "Fix these and compile again.]"
+    else output
   }
 
   private def showDiagnostic(diagnostic: Diagnostic): String = {
