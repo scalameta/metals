@@ -59,9 +59,9 @@ abstract class BazelMbtImporter(
         .run(queryEnv)
       targets = asLines(ruleKindsQueryOutput)
       _ = scribe.info(s"bazel-mbt: found ${targets.size} targets")
-      targetsXmlQueryOutput <- BazelQuery
-        .fullInformationQuery(targets)
-        .run(queryEnv)
+      targetsXmlQueryOutput <-
+        if (targets.isEmpty) Future.successful("<query version=\"2\"/>")
+        else BazelQuery.fullInformationQuery(targets).run(queryEnv)
       targetsXmlDump = new BazelTargetsXmlDump(targetsXmlQueryOutput)
       srcs = targetsXmlDump.getLabels("srcs")
       (genSrcOutputsByTarget, genSrcLabels) <-

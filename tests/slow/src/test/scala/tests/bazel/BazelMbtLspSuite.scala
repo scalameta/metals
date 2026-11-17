@@ -1403,4 +1403,48 @@ class BazelMbtLspSuite
     } yield ()
   }
 
+  test("bazel-import-mbt-excluded-targets") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        BazelBuildLayout(
+          s"""|$bazelWorkspaceLayout
+              |
+              |/.bazelproject
+              |targets:
+              |    //...:all
+              |    -//app/...:all
+              |
+              |""".stripMargin,
+          V.scala213,
+          bazelVersion,
+          mavenDeps,
+        ),
+        runAdditionalCommands = pinMaven,
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      mbtFile = workspace.resolve(".metals/mbt.json").readText
+      _ = assertNoDiff(escapeMbtFile(mbtFile), singleCoreMbtJson)
+      _ <- server.didOpen("core/Hello.scala")
+      _ <- server.assertHover(
+        "core/Hello.scala",
+        s"""|package core
+            |
+            |import cats.syntax.all._
+            |
+            |class Hello {
+            |  def hel@@lo: String = "Hello"
+            |  def catOption: Option[Int] = 1.some
+            |
+            |}
+            |""".stripMargin,
+        """|```scala
+           |def hello: String
+           |```
+           |""".stripMargin.hover,
+      )
+    } yield ()
+  }
+
 }
