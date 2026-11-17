@@ -16,7 +16,6 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BuildChange
-import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
@@ -25,11 +24,10 @@ import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.metals.mcp.McpDependencyFinder.FindDepKey
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.SymbolType
-import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -85,6 +83,9 @@ trait MetalsMcpTools extends Cancelable {
     .build()
 
   protected val jsonMapper = new JacksonMcpJsonMapper(objectMapper)
+
+  protected lazy val dependencyFinder =
+    new McpDependencyFinder(projectPath, scalaVersionSelector)
 
   protected def createContent(text: String): JList[Content] = {
     Arrays.asList(new TextContent(text))
@@ -768,12 +769,6 @@ trait MetalsMcpTools extends Cancelable {
     )
   }
 
-  protected object FindDepKey {
-    val version = "version"
-    val name = "name"
-    val organization = "organization"
-  }
-
   protected def createFindDepTool(): AsyncToolSpecification = {
     val schema =
       """{
@@ -815,73 +810,19 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
-        val org = arguments.getOptNoEmptyString(FindDepKey.organization)
-        val name = arguments.getOptNoEmptyString(FindDepKey.name)
-        val version = arguments.getOptNoEmptyString(FindDepKey.version)
-        val scalaVersion = arguments.getFileInFocusOpt match {
-          case Some(path) => scalaVersionSelector.scalaVersionForPath(path)
-          case None => scalaVersionSelector.fallbackScalaVersion()
-        }
-        val coursierComplete = new CoursierComplete(scalaVersion)
-        val scalaBinaryVersion =
-          ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
-
-        val isSbt2 =
-          SbtBuildTool.loadVersion(projectPath).exists(_.startsWith("2."))
-        val artifactCandidates = (name: String) => {
-          val sbt1Plugin = s"${name}_2.12_1.0"
-          val sbt2Plugin = s"${name}_sbt2_3"
-          val sbtPlugins =
-            if (isSbt2) List(sbt2Plugin, sbt1Plugin)
-            else List(sbt1Plugin, sbt2Plugin)
-          (s"${name}_$scalaBinaryVersion" :: sbtPlugins) :+ name
-        }
-
-        val potentialDepStrings = (org, name, version) match {
-          case (Some(org), Some(name), Some(version)) =>
-            val versionQuery = if (version.contains("latest")) "" else version
-            artifactCandidates(name).map(artifact =>
-              FindDepKey.version -> s"$org:$artifact:$versionQuery"
-            )
-          case (Some(org), Some(name), None) =>
-            artifactCandidates(name).map(artifact =>
-              FindDepKey.version -> s"$org:$artifact:"
-            ) :+ (FindDepKey.name -> s"$org:$name")
-          case (Some(org), None, _) =>
-            List(
-              FindDepKey.name -> s"$org:",
-              FindDepKey.organization -> s"$org",
-            )
-          case _ => List()
-        }
-        val completions = {
-          for {
-            (key, depString) <- potentialDepStrings.view
-            message <-
-              if (key == FindDepKey.version) {
-                val (stable, preRelease) =
-                  coursierComplete.completeVersions(depString)
-                Option.when(stable.nonEmpty || preRelease.nonEmpty)(
-                  McpMessages.FindDep
-                    .versionMessage(stable.headOption, preRelease)
-                )
-              } else {
-                val completed = coursierComplete.complete(depString)
-                Option.when(completed.nonEmpty)(
-                  McpMessages.FindDep
-                    .dependencyReturnMessage(key, completed.distinct)
-                )
-              }
-          } yield message
-        }.headOption
-          .getOrElse(McpMessages.FindDep.noCompletionsFound)
+      withErrorHandling { (_, arguments) =>
+        val message = dependencyFinder.find(
+          organization = arguments.getOptNoEmptyString(FindDepKey.organization),
+          name = arguments.getOptNoEmptyString(FindDepKey.name),
+          version = arguments.getOptNoEmptyString(FindDepKey.version),
+          fileInFocus = arguments.getFileInFocusOpt,
+        )
 
         Future
           .successful(
             CallToolResult
               .builder()
-              .content(createContent(completions))
+              .content(createContent(message))
               .isError(false)
               .build()
           )
