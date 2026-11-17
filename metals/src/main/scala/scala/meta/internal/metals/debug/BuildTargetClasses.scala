@@ -175,9 +175,19 @@ final class BuildTargetClasses(
         s"""|Found test classes:
             |${classes.testClasses.values.map(info => s"\t- ${info.fullyQualifiedName}").mkString("\n")}""".stripMargin
       )
-      classes.testClasses.filter { case (_, info) =>
+      val exact = classes.testClasses.filter { case (_, info) =>
         info.fullyQualifiedName == name
       }.toList
+      if (exact.nonEmpty || !name.contains("$")) exact
+      else {
+        val outerName = name.takeWhile(_ != '$')
+        classes.testClasses.collect {
+          case (symbol, info)
+              if info.fullyQualifiedName == outerName &&
+                info.framework == TestFrameworkUtils.JupiterTestFramework =>
+            symbol -> info.copy(fullyQualifiedName = name)
+        }.toList
+      }
     }
   }
 
@@ -1153,6 +1163,13 @@ object TestFrameworkSymbolRegistry {
 }
 
 object TestFrameworkUtils {
+  val JupiterTestFramework: TestFramework = TestFramework(
+    List(
+      "com.github.sbt.junit.jupiter.api.JupiterFramework",
+      "net.aichler.jupiter.api.JupiterFramework",
+    )
+  )
+
   val WeaverTestFramework: TestFramework = TestFramework(
     List("weaver.framework.CatsEffect")
   )
@@ -1175,6 +1192,7 @@ object TestFrameworkUtils {
 
   private lazy val supportedFrameworks = Set(
     TestFramework.JUnit,
+    JupiterTestFramework,
     TestFramework.munit,
     TestFramework.ScalaTest,
     WeaverTestFramework,
@@ -1184,7 +1202,8 @@ object TestFrameworkUtils {
 
   def from(framework: Option[String]): TestFramework = framework
     .map {
-      case "JUnit" | "Jupiter" => TestFramework.JUnit
+      case "JUnit" => TestFramework.JUnit
+      case "Jupiter" => JupiterTestFramework
       case "munit" => TestFramework.munit
       case "ScalaTest" => TestFramework.ScalaTest
       case "weaver-cats-effect" => WeaverTestFramework

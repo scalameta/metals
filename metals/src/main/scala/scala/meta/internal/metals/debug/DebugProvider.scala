@@ -526,13 +526,22 @@ class DebugProvider(
               for {
                 discovered <- discoverTests(id, testSuites)
                 project <- projectInfo
-              } yield new TestSuiteDebugAdapter(
-                workspace,
-                testSuites,
-                project,
-                userConfig().javaHome,
-                discovered,
-              )
+              } yield {
+                if (
+                  discovered.nonEmpty &&
+                  discovered.keys.forall(
+                    _ == TestFrameworkUtils.JupiterTestFramework
+                  )
+                ) jupiterDebuggee(testSuites, project)
+                else
+                  new TestSuiteDebugAdapter(
+                    workspace,
+                    testSuites,
+                    project,
+                    userConfig().javaHome,
+                    discovered,
+                  )
+              }
             }
           case b.DebugSessionParamsDataKind.SCALA_ATTACH_REMOTE =>
             for {
@@ -591,6 +600,30 @@ class DebugProvider(
       Some(jvmTestEnvironment),
     )
 
+  private def jupiterDebuggee(
+      testSuites: b.ScalaTestSuites,
+      project: DebugeeProject,
+  ): MetalsDebuggee = {
+    val runner = classOf[JUnitPlatformTestMain]
+    val runnerPath = AbsolutePath(JUnitPlatformTestMain.classpathEntry())
+    val arguments = testSuites.getSuites.asScala.toList.flatMap { suite =>
+      val tests = suite.getTests.asScala.toList
+      List(suite.getClassName, tests.size.toString) ++ tests
+    }
+    val mainClass = new ScalaMainClass(
+      runner.getName,
+      arguments.asJava,
+      testSuites.getJvmOptions,
+    )
+    mainClass.setEnvironmentVariables(testSuites.getEnvironmentVariables)
+    new MainClassDebugAdapter(
+      workspace,
+      mainClass,
+      project.copy(runClassPath = project.runClassPath :+ runnerPath),
+      userConfig().javaHome,
+    )
+  }
+
   def discoverTests(
       id: BuildTargetIdentifier,
       testClasses: b.ScalaTestSuites,
@@ -605,7 +638,33 @@ class DebugProvider(
           selection.getClassName(),
           id,
         )
-      } yield compilers.info(id, sym).map(_.map(pcInfo => (info, pcInfo)))
+      } yield {
+        if (info.framework == TestFrameworkUtils.JupiterTestFramework) {
+          Future.successful(
+            Some(
+              info -> Discovered(
+                sym,
+                info.fullyQualifiedName,
+                Set.empty,
+                Set.empty,
+                isModule = false,
+              )
+            )
+          )
+        } else {
+          compilers
+            .info(id, sym)
+            .map(_.map { pcInfo =>
+              info -> Discovered(
+                pcInfo.symbol,
+                info.fullyQualifiedName,
+                pcInfo.recursiveParents.map(_.symbolToFullyQualifiedName).toSet,
+                (pcInfo.annotations ++ pcInfo.memberDefsAnnotations).toSet,
+                isModule = pcInfo.symbol.endsWith("."),
+              )
+            })
+        }
+      }
 
     Future.sequence(symbolInfosList).map { infos =>
       scribe.debug(
@@ -626,18 +685,12 @@ class DebugProvider(
         .groupBy(_._1.fullyQualifiedName)
         .values
         .map { entries =>
-          val (info, pcInfo) = entries
+          val (info, discovered) = entries
             .find(e => !e._2.symbol.endsWith("."))
             .getOrElse(entries.head)
           (
             info.framework,
-            new Discovered(
-              pcInfo.symbol,
-              info.fullyQualifiedName,
-              pcInfo.recursiveParents.map(_.symbolToFullyQualifiedName).toSet,
-              (pcInfo.annotations ++ pcInfo.memberDefsAnnotations).toSet,
-              isModule = pcInfo.symbol.endsWith("."),
-            ),
+            discovered,
           )
         }
         .groupBy(_._1)

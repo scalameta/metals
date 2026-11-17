@@ -414,7 +414,8 @@ final class TestSuitesProvider(
       .map { semanticdb =>
         suites.flatMap { suite =>
           val testCases = suite.framework match {
-            case Config.TestFramework.JUnit =>
+            case Config.TestFramework.JUnit |
+                TestFrameworkUtils.JupiterTestFramework =>
               junitTestFinder.findTests(
                 doc = semanticdb,
                 path = path,
