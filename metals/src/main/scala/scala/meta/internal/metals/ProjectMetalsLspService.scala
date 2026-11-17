@@ -310,6 +310,7 @@ class ProjectMetalsLspService(
               scalafmtRunner,
               scalafixLlmRuleProvider,
               indexingPromise,
+              initialServerConfig.maxMcpCompileDiagnostics,
               onStdinClosed,
             )
           ).run()
@@ -333,6 +334,7 @@ class ProjectMetalsLspService(
               scalafmtRunner,
               scalafixLlmRuleProvider,
               indexingPromise,
+              initialServerConfig.maxMcpCompileDiagnostics,
             )
           ).run()
         }

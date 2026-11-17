@@ -40,6 +40,7 @@ class MetalsMcpServer(
     protected val scalafmtRunner: ScalafmtRunner,
     protected val scalafixLlmRuleProvider: ScalafixLlmRuleProvider,
     protected val indexingPromise: Promise[Unit],
+    protected val maxCompileDiagnostics: Int,
 )(implicit
     protected val ec: ExecutionContext
 ) extends MetalsMcpTools {

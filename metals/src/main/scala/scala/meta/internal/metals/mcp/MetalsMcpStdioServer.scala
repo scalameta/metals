@@ -42,6 +42,7 @@ class MetalsMcpStdioServer(
     protected val scalafmtRunner: ScalafmtRunner,
     protected val scalafixLlmRuleProvider: ScalafixLlmRuleProvider,
     protected val indexingPromise: Promise[Unit],
+    protected val maxCompileDiagnostics: Int,
     onStdinClosed: () => Unit = () => (),
 )(implicit
     protected val ec: ExecutionContext
