@@ -218,7 +218,7 @@ abstract class MetalsLspService(
 
   def containsJar(path: AbsolutePath): Boolean = {
     buildTargets.inverseSources(path).nonEmpty ||
-    mbtBuild.getDependencyModules.asScala.exists(_.jarPath.contains(path))
+    mbtBuild.getDependencyModules().asScala.exists(_.jarPath.contains(path))
   }
 
   val fileChanges: FileChanges =
@@ -1749,7 +1749,7 @@ abstract class MetalsLspService(
       item: CompletionItem
   ): CompletableFuture[CompletionItem] =
     CancelTokens.future { _ =>
-      if (clientConfig.isCompletionItemResolve) {
+      if (clientConfig.isCompletionItemResolve()) {
         compilers.completionItemResolve(item)
       } else {
         Future.successful(item)

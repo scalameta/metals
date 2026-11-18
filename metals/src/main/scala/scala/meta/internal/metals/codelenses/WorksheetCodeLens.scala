@@ -14,7 +14,7 @@ class WorksheetCodeLens(clientConfig: ClientConfiguration)(implicit
     val ec: ExecutionContext
 ) extends CodeLens {
 
-  override def isEnabled: Boolean = clientConfig.isCopyWorksheetOutputProvider
+  override def isEnabled: Boolean = clientConfig.isCopyWorksheetOutputProvider()
 
   override def codeLenses(
       path: AbsolutePath

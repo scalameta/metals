@@ -92,13 +92,13 @@ final class SuperMethodCodeLens(
             ) =>
           val location = new l.Location(path.toURI.toString(), range.toLsp)
           val command = ServerCommands.GotoPosition.toLsp(location)
-          command.setTitle(s"${clientConfig.icons.findsuper} ${name}")
+          command.setTitle(s"${clientConfig.icons().findsuper} ${name}")
           command
       }
     else
       Some {
         val command = ServerCommands.GotoSymbol.toLsp(symbol)
-        command.setTitle(s"${clientConfig.icons.findsuper} ${name}")
+        command.setTitle(s"${clientConfig.icons().findsuper} ${name}")
         command
       }
   }

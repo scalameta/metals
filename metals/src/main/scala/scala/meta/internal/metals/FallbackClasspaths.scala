@@ -131,7 +131,7 @@ class FallbackClasspaths(
       return Nil
     }
     val build = mbtBuild()
-    build.getDependencyModules.asScala.iterator.flatMap(_.jarPath).toSeq
+    build.getDependencyModules().asScala.iterator.flatMap(_.jarPath).toSeq
   }
 
   private def guessClasspath(): Seq[Path] = {

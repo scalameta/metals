@@ -214,7 +214,7 @@ class MetalsTreeViewProvider(
     if (params.visible) {
       params.viewId match {
         case TreeViewProvider.Project =>
-          val toUpdate = trees.map(_.flushPendingProjectUpdates).collect {
+          val toUpdate = trees.map(_.flushPendingProjectUpdates()).collect {
             case Some(value) => value
           }
           if (toUpdate.nonEmpty) {

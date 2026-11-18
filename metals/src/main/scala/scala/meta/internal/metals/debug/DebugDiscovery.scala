@@ -47,10 +47,10 @@ class DebugDiscovery(
 )(implicit ec: ExecutionContext) {
 
   private def mainClasses(bti: b.BuildTargetIdentifier) =
-    buildTargetClasses.classesOf(bti).mainClasses
+    buildTargetClasses.classesOf(bti).mainClasses()
 
   private def testClasses(bti: b.BuildTargetIdentifier) =
-    buildTargetClasses.classesOf(bti).testClasses
+    buildTargetClasses.classesOf(bti).testClasses()
 
   /**
    * Tries to discover the main class to run and returns
@@ -81,7 +81,7 @@ class DebugDiscovery(
     // Check if there are test classes or pending candidates (for lazy MBT discovery)
     def hasTestsOrCandidates(target: b.BuildTargetIdentifier): Boolean = {
       val classes = buildTargetClasses.classesOf(target)
-      classes.testClasses.nonEmpty || classes.candidateTestClasses.nonEmpty
+      classes.testClasses().nonEmpty || classes.candidateTestClasses().nonEmpty
     }
 
     def hasTestsOrCandidatesForPath(
@@ -89,8 +89,8 @@ class DebugDiscovery(
         path: AbsolutePath,
     ): Boolean = {
       val classes = buildTargetClasses.classesOf(target)
-      classes.testClasses.nonEmpty ||
-      classes.candidateTestClasses.contains(path)
+      classes.testClasses().nonEmpty ||
+      classes.candidateTestClasses().contains(path)
     }
 
     (runType, buildTarget, pathOpt) match {
@@ -263,10 +263,10 @@ class DebugDiscovery(
       if occurrence.role.isDefinition || occurrence.symbol == "scala/main#"
       symbol = occurrence.symbol
       mainClass <- {
-        val normal = classes.mainClasses.get(symbol)
+        val normal = classes.mainClasses().get(symbol)
         val fromAnnot = DebugDiscovery
           .mainFromAnnotation(occurrence, textDocument)
-          .flatMap(classes.mainClasses.get(_))
+          .flatMap(classes.mainClasses().get(_))
         List(normal, fromAnnot).flatten
       }
     } yield mainClass
@@ -301,10 +301,10 @@ class DebugDiscovery(
     mains.flatMap { mainClass =>
       val occOpt = textDocument.occurrences.find { occ =>
         occ.role.isDefinition && (
-          classes.mainClasses.get(occ.symbol).contains(mainClass) ||
+          classes.mainClasses().get(occ.symbol).contains(mainClass) ||
             DebugDiscovery
               .mainFromAnnotation(occ, textDocument)
-              .flatMap(classes.mainClasses.get(_))
+              .flatMap(classes.mainClasses().get(_))
               .contains(mainClass)
         )
       }
@@ -555,7 +555,7 @@ class DebugDiscovery(
         lazy val tests = for {
           symbolInfo <- textDocument.symbols
           symbol = symbolInfo.symbol
-          testSymbolInfo <- classes.testClasses.get(symbol)
+          testSymbolInfo <- classes.testClasses().get(symbol)
         } yield testSymbolInfo.fullyQualifiedName
         val mainWithFallback = findMainClasses(textDocument, classes)
         if (mainWithFallback.nonEmpty) {
@@ -611,7 +611,7 @@ class DebugDiscovery(
               .flatMap(scalaTarget =>
                 JavaBinary.javaBinaryFromPath(scalaTarget.jvmHome)
               )
-              .orElse(userConfig().usedJavaBinary)
+              .orElse(userConfig().usedJavaBinary())
             buildTargetClasses
               .jvmRunEnvironment(params.getTargets().get(0), isTests = false)
               .map { envItem =>
@@ -766,7 +766,7 @@ object DebugDiscovery {
       classes: BuildTargetClasses.Classes,
   ): Seq[b.ScalaMainClass] = {
     val symbolsWithMain = textDocument.symbols.filter(info =>
-      classes.mainClasses.contains(info.symbol)
+      classes.mainClasses().contains(info.symbol)
     )
     for {
       sym <- symbolsWithMain
@@ -775,7 +775,8 @@ object DebugDiscovery {
           occ.symbol == sym.symbol && occ.role.isDefinition
         )
       }
-      main <- classes.mainClasses
+      main <- classes
+        .mainClasses()
         .get(sym.symbol)
     } yield main
   }

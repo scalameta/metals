@@ -117,13 +117,13 @@ final class BuildTargetClasses(
   def findMainClassByName(
       name: String
   ): List[(b.ScalaMainClass, b.BuildTargetIdentifier)] =
-    findClassesBy(_.mainClasses.values.find(_.getClassName() == name))
+    findClassesBy(_.mainClasses().values.find(_.getClassName() == name))
 
   def findTestClassByName(
       name: String
   ): List[(String, b.BuildTargetIdentifier)] =
     findClassesBy(
-      _.testClasses.values
+      _.testClasses().values
         .find(_.fullyQualifiedName == name)
         .map(_.fullyQualifiedName)
     )
@@ -132,7 +132,7 @@ final class BuildTargetClasses(
       className: String,
       targetId: b.BuildTargetIdentifier,
   ): Option[AbsolutePath] =
-    index.get(targetId).flatMap(_.confirmedMbtTestClassFile.get(className))
+    index.get(targetId).flatMap(_.confirmedMbtTestClassFile().get(className))
 
   def frameworkForMbtTestClass(
       className: String,
@@ -153,7 +153,10 @@ final class BuildTargetClasses(
       .getOrElse(index.toList)
     val targetsWithMatchingCandidates = requestedTargets.flatMap {
       case (targetId, classes) =>
-        val hasMatchingCandidate = classes.candidateTestClasses.values.flatten
+        val hasMatchingCandidate = classes
+          .candidateTestClasses()
+          .values
+          .flatten
           .exists(_.candidateSymbol.contains(normalizedClassName))
         if (hasMatchingCandidate) Some(targetId) else None
     }
@@ -173,11 +176,14 @@ final class BuildTargetClasses(
     index.get(id).toList.flatMap { classes =>
       scribe.debug(
         s"""|Found test classes:
-            |${classes.testClasses.values.map(info => s"\t- ${info.fullyQualifiedName}").mkString("\n")}""".stripMargin
+            |${classes.testClasses().values.map(info => s"\t- ${info.fullyQualifiedName}").mkString("\n")}""".stripMargin
       )
-      classes.testClasses.filter { case (_, info) =>
-        info.fullyQualifiedName == name
-      }.toList
+      classes
+        .testClasses()
+        .filter { case (_, info) =>
+          info.fullyQualifiedName == name
+        }
+        .toList
     }
   }
 
@@ -734,7 +740,7 @@ final class BuildTargetClasses(
     val targetIds = Seq(targetId)
 
     val hasCandidates = targetIds.exists { tid =>
-      index.get(tid).exists(_.candidateMainClasses.contains(path))
+      index.get(tid).exists(_.candidateMainClasses().contains(path))
     }
 
     if (!hasCandidates) {
@@ -810,7 +816,7 @@ final class BuildTargetClasses(
     val candidatePaths = for {
       tid <- targetIds
       classes <- index.get(tid).toSeq
-      (path, candidates) <- classes.candidateMainClasses.toSeq
+      (path, candidates) <- classes.candidateMainClasses().toSeq
       // If a main class name is provided, filter candidates that might match
       if mainClassName.forall { className =>
         val normalizedClassName = className.replace(".", "/")
@@ -855,7 +861,7 @@ final class BuildTargetClasses(
     val targetIds = Seq(targetId)
 
     val hasCandidates = targetIds.exists { tid =>
-      index.get(tid).exists(_.candidateTestClasses.contains(path))
+      index.get(tid).exists(_.candidateTestClasses().contains(path))
     }
     if (!hasCandidates) {
       Future.unit
@@ -884,7 +890,7 @@ final class BuildTargetClasses(
     val candidatePaths = for {
       tid <- targetIds
       classes <- index.get(tid).toSeq
-      (path, _) <- classes.candidateTestClasses.toSeq
+      (path, _) <- classes.candidateTestClasses().toSeq
     } yield path
     val distinctPaths = candidatePaths.distinct
 

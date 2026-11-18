@@ -861,7 +861,7 @@ class PackageProvider(
         case _ => acc
       }
     tree match {
-      case Source(List(pk: Pkg)) => extractOuterPackage(pk).reverse
+      case Source(List(pk: Pkg)) => extractOuterPackage(pk).reverse()
       case _ => PackagesStructure.empty
     }
   }
@@ -960,7 +960,7 @@ class PackageProvider(
 
     for {
       (sampleSourcePath, tree) <- sampleSourcePathAndTree
-      packagePartsFromTree = findPackages(tree).allParts
+      packagePartsFromTree = findPackages(tree).allParts()
       packagePartsFromPath <- deducePackagePartsFromPath(sampleSourcePath)
       packagePrefix <- stripSuffix(packagePartsFromTree, packagePartsFromPath)
     } yield packagePrefix
@@ -1112,7 +1112,7 @@ object PackageProvider {
       PackagesStructure(pkgs.reverse, pkgObject)
     def allPackagesParts(): List[List[String]] =
       pkgs.map(_.name) ++ pkgObject.map(obj => List(obj.name.value)).toList
-    def allParts(): List[String] = allPackagesParts.flatten
+    def allParts(): List[String] = allPackagesParts().flatten
   }
 
   object PackagesStructure {

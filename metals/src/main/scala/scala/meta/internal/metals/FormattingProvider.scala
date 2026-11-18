@@ -313,7 +313,7 @@ final class FormattingProvider(
 
   private def askScalafmtVersion(): Future[Option[String]] = {
     if (!tables.dismissedNotifications.ChangeScalafmtVersion.isDismissed) {
-      if (clientConfig.isInputBoxEnabled) {
+      if (clientConfig.isInputBoxEnabled()) {
         client
           .metalsInputBox(MissingScalafmtVersion.inputBox())
           .asScala
