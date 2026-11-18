@@ -7,13 +7,13 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
 
   test("unsupported-scala-212") {
     cleanWorkspace()
-    val using = "2.12.4"
+    val usedVersion = "2.12.4"
     for {
       _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
-           |    "scalaVersion": "${using}"
+           |    "scalaVersion": "${usedVersion}"
            |  }
            |}
            |/a/src/main/scala/a/Main.scala
@@ -23,20 +23,20 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        Messages.UnsupportedScalaVersion.message(Set(using)),
+        Messages.UnsupportedScalaVersion.message(Set(usedVersion)),
       )
     } yield ()
   }
 
   test("no-warnings-scala-3") {
     cleanWorkspace()
-    val using = V.scala3
+    val usedVersion = V.scala3
     for {
       _ <- initialize(
         s"""/metals.json
            |{
            |  "a": {
-           |    "scalaVersion": "${using}"
+           |    "scalaVersion": "${usedVersion}"
            |  }
            |}
            |/a/src/main/scala/a/Main.scala

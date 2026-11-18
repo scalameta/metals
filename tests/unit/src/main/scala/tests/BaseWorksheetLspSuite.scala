@@ -689,11 +689,11 @@ abstract class BaseWorksheetLspSuite(
       )
       _ <- server.didOpen("a/src/main/scala/foo/Main.worksheet.sc")
       _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")
-      export = server.exportEvaluation(
+      exported = server.exportEvaluation(
         "a/src/main/scala/foo/Main.worksheet.sc"
       )
       _ = assertEquals(
-        export,
+        exported,
         Some(
           getExpected(
             """|
@@ -739,11 +739,11 @@ abstract class BaseWorksheetLspSuite(
         )
       )
       _ <- server.didSave("a/src/main/scala/foo/Main.worksheet.sc")
-      export = server.exportEvaluation(
+      exported = server.exportEvaluation(
         "a/src/main/scala/foo/Main.worksheet.sc"
       )
       _ = assertEquals(
-        export,
+        exported,
         Some(
           getExpected(
             """|
