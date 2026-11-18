@@ -32,8 +32,10 @@ class JavaSourceOrganizeImports(buffers: Buffers) extends CodeAction {
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = Future {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    // Organizing imports parses the whole file, so only do it when explicitly requested.
-    val isRequested = Option(params.getContext.getOnly).exists(!_.isEmpty)
+    // Organizing imports parses the whole file, so only do it when this kind is explicitly requested.
+    val isRequested = Option(params.getContext.getOnly).exists(
+      _.asScala.exists(requested => kind.startsWith(requested))
+    )
     if (!isRequested) Nil
     else
       for {
