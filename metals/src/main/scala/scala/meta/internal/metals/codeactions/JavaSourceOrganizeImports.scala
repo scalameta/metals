@@ -4,11 +4,11 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+import scala.meta.inputs as m
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
-import scala.meta.inputs as m
 
 import com.google.googlejavaformat.java.FormatterException
 import com.google.googlejavaformat.java.ImportOrderer
