@@ -65,7 +65,7 @@ class RewriteBracesParensCodeAction(
       .getOrElse(Nil)
   }
 
-  private def switchFrom[L: ClassTag, R: ClassTag](
+  private def switchFrom[L <: Token: ClassTag, R <: Token: ClassTag](
       path: AbsolutePath,
       appl: Term.Apply,
   ): Seq[l.CodeAction] = {
