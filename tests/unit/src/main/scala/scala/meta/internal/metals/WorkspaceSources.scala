@@ -1,10 +1,10 @@
 package scala.meta.internal.metals
 
-import scala.sys.process._
+import scala.sys.process.*
 import scala.util.control.NonFatal
 
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 import geny.Generator

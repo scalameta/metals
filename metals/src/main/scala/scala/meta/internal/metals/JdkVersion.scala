@@ -1,6 +1,6 @@
 package scala.meta.internal.metals
 
-import java.{util => ju}
+import java.util as ju
 
 import scala.concurrent.ExecutionContext
 import scala.io.Source
@@ -9,7 +9,7 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 

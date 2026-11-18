@@ -11,7 +11,7 @@ import scala.meta.Tree
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.docstrings.WikiLink
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath

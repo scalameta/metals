@@ -4,20 +4,20 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.parsing.JavaClass
 import scala.meta.internal.parsing.JavaMethod
 import scala.meta.internal.parsing.JavaTrees
 import scala.meta.internal.parsing.JavaVariable
 import scala.meta.pc.CancelToken
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class GenerateEqualsHashCodeToString(
     javaTrees: JavaTrees,
     buffers: Buffers,
 ) extends CodeAction {
-  import GenerateEqualsHashCodeToString._
+  import GenerateEqualsHashCodeToString.*
 
   override def kind: String = l.CodeActionKind.QuickFix
   override def isScala: Boolean = false

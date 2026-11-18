@@ -4,7 +4,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.util.Failure
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -355,7 +355,7 @@ object GradleInfoExtractor {
       )
       builder.setJavaHome(javaHome)
     }
-    if (extraArgs.nonEmpty) builder.withArguments(extraArgs: _*)
+    if (extraArgs.nonEmpty) builder.withArguments(extraArgs*)
     Try {
       builder.get()
     }.recoverWith { case NonFatal(e) =>

@@ -1,7 +1,7 @@
 package scala.meta.internal.metals
 
 sealed abstract class Confirmation {
-  import Confirmation._
+  import Confirmation.*
   def isYes: Boolean = this == Yes
   def isNo: Boolean = this == No
 }

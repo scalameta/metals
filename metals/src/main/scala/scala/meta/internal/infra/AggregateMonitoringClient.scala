@@ -8,7 +8,7 @@ import scala.util.control.NonFatal
 import scala.meta.infra.Event
 import scala.meta.infra.Metric
 import scala.meta.infra.MonitoringClient
-import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.jdk.CollectionConverters.*
 
 class AggregateMonitoringClient(val underlying: List[MonitoringClient])
     extends MonitoringClient {

@@ -7,7 +7,7 @@ import java.nio.file.Paths
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.HoverExtParams
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position

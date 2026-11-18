@@ -2,7 +2,7 @@ package tests
 package digest
 
 import scala.meta.internal.builds.MillDigest
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
 
 class MillDigestSuite extends BaseDigestSuite {

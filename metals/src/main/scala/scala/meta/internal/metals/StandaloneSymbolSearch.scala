@@ -2,11 +2,11 @@ package scala.meta.internal.metals
 
 import java.net.URI
 import java.nio.file.Path
-import java.{util => ju}
+import java.util as ju
 
 import scala.collection.concurrent.TrieMap
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.Mtags

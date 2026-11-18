@@ -11,7 +11,7 @@ import scala.meta.internal.builds.BazelDigest
 import scala.meta.internal.builds.BazelProjectViewTargets
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -62,9 +62,9 @@ abstract class BazelMbtImporter(
         .run(queryEnv)
       targets = asLines(ruleKindsQueryOutput)
       _ = scribe.info(s"bazel-mbt: found ${targets.size} targets")
-      targetsXmlQueryOutput <- BazelQuery
-        .fullInformationQuery(targets)
-        .run(queryEnv)
+      targetsXmlQueryOutput <-
+        if (targets.isEmpty) Future.successful("<query version=\"2\"/>")
+        else BazelQuery.fullInformationQuery(targets).run(queryEnv)
       targetsXmlDump = new BazelTargetsXmlDump(targetsXmlQueryOutput)
       srcs = targetsXmlDump.getLabels("srcs")
       (genSrcOutputsByTarget, genSrcLabels) <-
@@ -497,7 +497,7 @@ abstract class BazelMbtImporter(
           .filter(_.nonEmpty)
           .flatMap { line =>
             line.split("\t") match {
-              case Array(rawLabel, paths @ _*) =>
+              case Array(rawLabel, paths*) =>
                 val label =
                   if (rawLabel.startsWith("@@//")) rawLabel.substring(2)
                   else rawLabel

@@ -13,7 +13,7 @@ import scala.concurrent.Promise
 import scala.concurrent.duration.FiniteDuration
 
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.utils.RequestRegistry
 import scala.meta.internal.metals.utils.Timeout

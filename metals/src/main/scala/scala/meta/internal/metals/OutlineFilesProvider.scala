@@ -1,15 +1,15 @@
 package scala.meta.internal.metals
 
+import java.util as ju
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
-import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.OutlineFiles as JOutlineFiles
 import scala.meta.pc.VirtualFileParams
-import scala.meta.pc.{OutlineFiles => JOutlineFiles}
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 

@@ -2,7 +2,7 @@ package scala.meta.internal.builds
 import java.nio.file.Files
 import java.nio.file.Path
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.util.Properties
 
 import scala.meta.internal.metals.BuildInfo
@@ -19,7 +19,7 @@ case class MillBuildTool(
     with VersionRecommendation {
 
   private[builds] def getMillVersion(workspace: AbsolutePath): String = {
-    import scala.meta.internal.jdk.CollectionConverters._
+    import scala.meta.internal.jdk.CollectionConverters.*
     val millVersionPath = workspace.resolve(".mill-version")
     lazy val altMillVersionPath =
       workspace.resolve(".config").resolve("mill-version")

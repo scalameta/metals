@@ -3,16 +3,16 @@ package scala.meta.internal.metals
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.pc.InlayHints
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
 import com.google.gson.JsonElement
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintLabelPart
 import org.eclipse.lsp4j.TextDocumentIdentifier
-import org.eclipse.{lsp4j => l}
 
 final class InlayHintResolveProvider(
     definitionProvider: DefinitionProvider,
@@ -136,7 +136,7 @@ object InlayHintCompat {
 
   // for compatibility with old inlay hint data
   def maybeFixInlayHintData(hint: InlayHint, uri: String): InlayHint = {
-    if (hint.getData.isInstanceOf[Array[_]]) {
+    if (hint.getData.isInstanceOf[Array[?]]) {
       try {
         val labelParts = parseData(hint.getData.asInstanceOf[Array[Any]])
         hint.setData(InlayHints.toData(uri, labelParts))

@@ -5,12 +5,12 @@ import scala.concurrent.Future
 
 import scala.meta.internal.jpc.JavacDiagnostic
 import scala.meta.internal.metals.Compilers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 import scala.meta.pc.CodeActionId
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class ChangeVariableType(
     compilers: Compilers

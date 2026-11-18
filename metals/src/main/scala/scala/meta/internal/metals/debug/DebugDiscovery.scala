@@ -9,18 +9,18 @@ import scala.util.Success
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JavaBinary
-import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.JsonParser.*
 import scala.meta.internal.metals.JvmOpts
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsBuildClient
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.config.RunType
-import scala.meta.internal.metals.config.RunType._
+import scala.meta.internal.metals.config.RunType.*
 import scala.meta.internal.metals.config.UserConfiguration
-import scala.meta.internal.metals.debug.DiscoveryFailures._
+import scala.meta.internal.metals.debug.DiscoveryFailures.*
 import scala.meta.internal.metals.mbt.MbtReferenceProvider
 import scala.meta.internal.metals.testProvider.TestCaseEntry
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
@@ -30,7 +30,7 @@ import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.Position
 
@@ -64,7 +64,7 @@ class DebugDiscovery(
     debugDiscovery(unresolvedParams).flatMap(enrichWithMainShellCommand)
   }
 
-  import DebugDiscovery._
+  import DebugDiscovery.*
 
   private def validate(
       params: DebugDiscoveryParams
@@ -278,7 +278,7 @@ class DebugDiscovery(
   private def discoverTestCases(
       path: AbsolutePath
   ): Future[List[(String, List[TestCaseEntry])]] = {
-    import scala.jdk.CollectionConverters._
+    import scala.jdk.CollectionConverters.*
     import scala.meta.internal.metals.testProvider.TestExplorerEvent.AddTestCases
 
     val testUpdates = testProvider.discoverTests(Some(path))
@@ -780,7 +780,7 @@ object DebugDiscovery {
     } yield main
   }
 
-  import scala.meta.internal.semanticdb.Scala._
+  import scala.meta.internal.semanticdb.Scala.*
 
   /**
    * Converts Scala3 sorceToplevelSymbol into a plain one that corresponds to class name.

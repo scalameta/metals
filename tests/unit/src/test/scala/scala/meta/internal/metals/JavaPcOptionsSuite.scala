@@ -2,7 +2,7 @@ package scala.meta.internal.metals
 
 import javax.tools.ToolProvider
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 import munit.TestOptions
 import tests.BaseSuite

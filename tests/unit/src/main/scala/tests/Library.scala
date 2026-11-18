@@ -1,6 +1,6 @@
 package tests
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.PackageIndex
@@ -134,7 +134,7 @@ object Library {
       .withMainArtifacts()
       .addClassifiers("sources")
       .withDependencies(
-        deps: _*
+        deps*
       )
     val jars = fetch
       .fetch()

@@ -4,7 +4,7 @@ import java.nio.file.Files
 
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.RecursivelyDelete
 
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams

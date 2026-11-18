@@ -4,7 +4,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 import scala.concurrent.Promise
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.clients.language.StatusType

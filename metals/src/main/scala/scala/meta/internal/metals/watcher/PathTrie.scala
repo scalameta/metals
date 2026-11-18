@@ -2,9 +2,9 @@ package scala.meta.internal.metals.watcher
 
 import java.nio.file.Path
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
-import scala.meta.internal.metals.watcher.PathTrie._
+import scala.meta.internal.metals.watcher.PathTrie.*
 
 /**
  * Trie representation of a set of paths

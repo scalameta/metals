@@ -6,7 +6,7 @@ import scala.meta.internal.builds.Digest.Status
  * Represents the status of a `workspace/reload` or a `bloopInstall` request.
  */
 sealed abstract class WorkspaceLoadedStatus extends Product with Serializable {
-  import WorkspaceLoadedStatus._
+  import WorkspaceLoadedStatus.*
   def name: String =
     this match {
       case Duplicate(status) => status.toString

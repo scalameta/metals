@@ -16,12 +16,12 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.util.Failure
 import scala.util.Success
 
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.JsonParser.*
 import scala.meta.internal.metals.MetalsBuildServer
 import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
 import scala.meta.internal.metals.MetalsEnrichments.XtensionDebugSessionParams

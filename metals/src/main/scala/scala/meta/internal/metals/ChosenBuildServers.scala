@@ -3,7 +3,7 @@ package scala.meta.internal.metals
 import java.sql.Connection
 import java.sql.Timestamp
 
-import scala.meta.internal.metals.JdbcEnrichments._
+import scala.meta.internal.metals.JdbcEnrichments.*
 
 class ChosenBuildServers(conn: () => Connection, time: Time) {
   final val explicit = "EXPLICIT"

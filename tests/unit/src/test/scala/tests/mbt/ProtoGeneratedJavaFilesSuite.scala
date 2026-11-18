@@ -1,6 +1,6 @@
 package tests.mbt
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.mbt.ProtoGeneratedJavaFiles
 import scala.meta.internal.metals.mbt.ProtoJavaVirtualFile
 import scala.meta.internal.metals.mbt.VirtualTextDocument
@@ -8,11 +8,11 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc
 
 import munit.AnyFixture
-import tests.MetalsTestEnrichments._
+import tests.MetalsTestEnrichments.*
 
 class ProtoGeneratedJavaFilesSuite extends munit.FunSuite {
   val workspace = new tests.TemporaryDirectoryFixture()
-  override def munitFixtures: Seq[AnyFixture[_]] = List(workspace)
+  override def munitFixtures: Seq[AnyFixture[?]] = List(workspace)
 
   private val protoRelative = "a/src/main/proto/client.proto"
   private val className = "ClientProtos"

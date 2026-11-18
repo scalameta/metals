@@ -3,7 +3,7 @@ package scala.meta.internal.bsp
 import scala.util.Try
 
 import scala.meta.internal.builds.ScalaCliBuildTool
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 object ScalaCliBspScope {

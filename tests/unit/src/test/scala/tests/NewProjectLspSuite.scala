@@ -11,7 +11,7 @@ import scala.util.Try
 import scala.meta.internal.builds.NewProjectProvider
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams

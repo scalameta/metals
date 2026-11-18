@@ -3,10 +3,10 @@ package scala.meta.internal.metals
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util as ju
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ScheduledExecutorService
 import java.util.function.Supplier
-import java.{util => ju}
 import javax.tools.OptionChecker
 import javax.tools.ToolProvider
 
@@ -23,7 +23,7 @@ import scala.util.control.NonFatal
 import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.jpc.JavaPresentationCompiler
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.SourcePathConfig
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.GitVCS

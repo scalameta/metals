@@ -2,14 +2,16 @@ package scala.meta.internal.metals.mbt.importer
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.CancellationException
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Try
 
 import scala.meta.internal.builds.BazelProjectViewTargets
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.process.ExitCodes
 import scala.meta.internal.process.ProcessOutput
 import scala.meta.io.AbsolutePath
@@ -53,13 +55,38 @@ object BazelQuery {
     case object CQuery extends QueryType("cquery")
   }
 
-  import OutputMode._
+  import OutputMode.*
+
+  /**
+   * Exit code returned by `bazel query --keep_going` when some packages fail
+   * to load or analyze while valid partial query results are still emitted.
+   */
+  private val PartialAnalysisFailureExitCode: Int = 3
+
+  private val MaxCapturedStderrLines: Int = 20
 
   def buildRuleKindsQuery(patterns: List[String]): BazelQuery = {
-    val ps =
-      if (patterns.isEmpty) BazelProjectViewTargets.defaultPatterns
-      else patterns
-    val query = s"kind('${ruleKinds mkString "|"}', set(${ps mkString " "}))"
+    val trimmed = for {
+      pattern <- patterns
+      p = pattern.trim
+      if p.nonEmpty
+    } yield p
+    val (rawExcludes, rawIncludes) = trimmed.partition(_.startsWith("-"))
+    val parsedIncludes = rawIncludes.flatMap(quoteTarget)
+    val includes =
+      if (parsedIncludes.isEmpty) BazelProjectViewTargets.defaultPatterns
+      else parsedIncludes
+    val excludes = for {
+      raw <- rawExcludes
+      stripped = raw.stripPrefix("-").trim
+      if stripped.nonEmpty
+      quoted <- quoteTarget(stripped)
+    } yield quoted
+    val targetExpr =
+      if (excludes.isEmpty) s"set(${includes.mkString(" ")})"
+      else
+        s"set(${includes.mkString(" ")}) except set(${excludes.mkString(" ")})"
+    val query = s"kind('${ruleKinds.mkString("|")}', $targetExpr)"
     BazelQuery(query, outputMode = Label)
   }
 
@@ -213,14 +240,15 @@ case class BazelQuery(
     extraArgs: List[String] = Nil,
     queryType: BazelQuery.QueryType = BazelQuery.QueryType.Query,
 ) {
-  import BazelQuery._
+  import BazelQuery.*
 
   def run(
       env: Env,
       mbtJavaHome: Option[String] = None,
   )(implicit ec: ExecutionContext): Future[String] = {
-    import env._
+    import env.*
     val buf = new StringBuilder()
+    val errLines = mutable.Queue.empty[String]
     val (queryArgs, queryFile) = prepareQueryArgs(query)
     shellRunner
       .run(
@@ -238,7 +266,18 @@ case class BazelQuery(
           buf.append(line)
           buf.append(System.lineSeparator())
         },
-        processErr = scribe.warn(_),
+        processErr = { line =>
+          scribe.warn(line)
+          val trimmed = line.trim
+          if (trimmed.nonEmpty) {
+            errLines.synchronized {
+              if (errLines.size >= MaxCapturedStderrLines) {
+                errLines.dequeue()
+              }
+              errLines.enqueue(trimmed)
+            }
+          }
+        },
       )
       .future
       .andThen {
@@ -253,17 +292,27 @@ case class BazelQuery(
       .flatMap {
         case ExitCodes.Success =>
           Future.successful(buf.toString)
+        case PartialAnalysisFailureExitCode =>
+          scribe.warn(
+            s"bazel-mbt: bazel $queryType exited with code $PartialAnalysisFailureExitCode (partial results with --keep_going)."
+          )
+          Future.successful(buf.toString)
         case ExitCodes.Cancel =>
           Future.failed(
-            new java.util.concurrent.CancellationException(
+            new CancellationException(
               "bazel-mbt: query cancelled"
             )
           )
         case code =>
-          scribe.warn(
-            s"bazel-mbt: bazel query failed with exit code $code, but might be unreleated."
+          val details = errLines.synchronized {
+            errLines.mkString("; ")
+          }
+          val suffix = if (details.nonEmpty) s": $details" else ""
+          Future.failed(
+            new RuntimeException(
+              s"bazel-mbt: bazel $queryType failed with exit code $code$suffix"
+            )
           )
-          Future.successful(buf.toString)
       }
   }
 

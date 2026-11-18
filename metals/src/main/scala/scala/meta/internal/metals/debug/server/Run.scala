@@ -30,10 +30,11 @@ object Run {
       classPath.map(_.toString()).mkString(File.pathSeparator)
     val java = JavaBinary(userJavaHome).toString()
     val classpathOption = "-cp" :: fullClasspathStr :: Nil
-    val cmd =
+    val javaCommand =
       java :: jvmOptions ::: (if (debug) enableDebugInterface :: Nil
                               else
-                                Nil) ::: classpathOption ::: (className :: args)
+                                Nil)
+    val cmd = javaCommand ::: classpathOption ::: (className :: args)
     val cmdLength = cmd.foldLeft(0)(_ + _.length)
     val envOptions =
       envVariables.flatMap { line =>
@@ -61,7 +62,7 @@ object Run {
         ManifestJar.withTempManifestJar(classPath) { manifestJar =>
           val shortClasspathOption = "-cp" :: manifestJar.syntax :: Nil
           val shortCmd =
-            java :: jvmOptions ::: shortClasspathOption ::: (className :: args) // appOptions
+            javaCommand ::: shortClasspathOption ::: (className :: args)
           SystemProcess.run(
             shortCmd,
             root,

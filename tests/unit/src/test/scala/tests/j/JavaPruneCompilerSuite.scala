@@ -4,6 +4,33 @@ import tests.JavaModuleExports
 
 class JavaPruneCompilerSuite extends BaseJavaPruneCompilerSuite {
 
+  // Dropping super(value) introduces a dependency attribution error, which
+  // stops javac flow analysis before it reports the caller's missing return.
+  checkErrors(
+    "constructor-delegation-caller-missing-return",
+    """|/example/Base.java
+       |package example;
+       |public class Base {
+       |  public Base(String value) {}
+       |}
+       |/example/Derived.java
+       |package example;
+       |public class Derived extends Base {
+       |  public Derived(String value) { super(value); }
+       |}
+       |/example/Caller.java
+       |package example;
+       |public class Caller {
+       |  public String use() { new Derived("value"); }
+       |}
+       |""".stripMargin,
+    "example/Caller.java",
+    """|example/Caller.java:3:47: error: missing return statement
+       |  public String use() { new Derived("value"); }
+       |                                              ^
+       |""".stripMargin,
+  )
+
   checkNoErrors(
     "class",
     """|/a/src/main/java/example/foo/Example.java

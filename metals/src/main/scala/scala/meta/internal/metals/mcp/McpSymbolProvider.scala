@@ -3,7 +3,7 @@ package scala.meta.internal.metals.mcp
 import scala.collection.mutable.ListBuffer
 
 import scala.meta.internal.metals.EmptyReportContext
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.metals.mcp.McpQueryEngine.kindToTypeString

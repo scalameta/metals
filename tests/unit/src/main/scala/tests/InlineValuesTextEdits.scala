@@ -1,9 +1,9 @@
 package tests
 
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 object InlineValuesTextEdits {
   def apply(

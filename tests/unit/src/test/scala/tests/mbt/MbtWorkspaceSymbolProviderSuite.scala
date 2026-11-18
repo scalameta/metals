@@ -5,7 +5,7 @@ import java.nio.file.Paths
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
@@ -16,7 +16,7 @@ import scala.meta.io.AbsolutePath
 
 import munit.AnyFixture
 import munit.TestOptions
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 import tests.CustomLoggingFixture
 import tests.FileLayout
 import tests.TemporaryDirectoryFixture
@@ -24,7 +24,7 @@ import tests.TemporaryDirectoryFixture
 class MbtWorkspaceSymbolSearchSuite extends munit.FunSuite {
   case class Query(value: String, expected: String)
   val workspace = new TemporaryDirectoryFixture()
-  override def munitFixtures: Seq[AnyFixture[_]] =
+  override def munitFixtures: Seq[AnyFixture[?]] =
     List(
       workspace,
       CustomLoggingFixture.showWarnings(),

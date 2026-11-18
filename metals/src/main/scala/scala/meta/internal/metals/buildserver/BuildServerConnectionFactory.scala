@@ -18,7 +18,7 @@ import scala.meta.internal.metals.DismissedNotifications
 import scala.meta.internal.metals.LargeLauncher
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsBuildServer
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RequestMonitorImpl
 import scala.meta.internal.metals.ServerLivenessMonitor
@@ -32,8 +32,8 @@ import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.*
 import ch.epfl.scala.bsp4j.InitializeBuildResult
-import ch.epfl.scala.bsp4j._
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer

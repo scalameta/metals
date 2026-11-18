@@ -14,7 +14,7 @@ import scala.meta.internal.jsemanticdb.Semanticdb.Language
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.FingerprintedCharSequence
 import scala.meta.internal.metals.Fuzzy
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.StringBloomFilter
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.MtagsIndexer

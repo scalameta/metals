@@ -3,14 +3,14 @@ package scala.meta.internal.metals.debug
 import scala.collection.mutable
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.debug.StepNavigator._
+import scala.meta.internal.metals.debug.StepNavigator.*
 import scala.meta.io.AbsolutePath
 
 final class StepNavigator(
     root: AbsolutePath,
     steps: Seq[(Location, DebugStep)],
 ) extends Stoppage.Handler {
-  private val expectedSteps = mutable.Queue(steps: _*)
+  private val expectedSteps = mutable.Queue(steps*)
 
   override def apply(stoppage: Stoppage): DebugStep = {
     if (expectedSteps.isEmpty) {

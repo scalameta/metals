@@ -15,7 +15,7 @@ import scala.util.control.NonFatal
 import scala.meta.infra
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.infra.NoopMonitoringClient
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.WorkDoneProgress.Token
 import scala.meta.pc.ProgressBars
 
@@ -145,7 +145,7 @@ class WorkDoneProgress(
 
   private val taskMap = new ConcurrentHashMap[Token, Task]()
 
-  private var scheduledFuture: ScheduledFuture[_] = _
+  private var scheduledFuture: ScheduledFuture[?] = _
 
   private class WorkDoneProgressBar(
       val params: ProgressBars.StartProgressBarParams,

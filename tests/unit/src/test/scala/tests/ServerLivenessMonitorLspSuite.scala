@@ -4,7 +4,7 @@ import scala.concurrent.duration.Duration
 
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.metals.Icons
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatusBarConfig
 

@@ -2,7 +2,7 @@ package tests.mbt
 
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.InitializationOptions
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.AutoImportBuildKind
 import scala.meta.internal.metals.config.MbtConfig
 import scala.meta.internal.metals.config.UserConfiguration

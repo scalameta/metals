@@ -5,9 +5,9 @@ import java.io.UncheckedIOException
 import scala.collection.concurrent.TrieMap
 
 import scala.meta.Dialect
-import scala.meta.dialects._
+import scala.meta.dialects.*
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
