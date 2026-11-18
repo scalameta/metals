@@ -119,59 +119,84 @@ trait MavenLockFileParser {
       relativePaths: Seq[String],
       repositoryNames: Seq[String],
       extensionPrefix: Option[String] = None,
-  ): Option[AbsolutePath] = {
-    val directMatch =
-      relativePaths.map(path => scanned.dir.resolve(path)).find(_.exists)
-
-    directMatch.orElse {
-      val bzlmodRepositoryNames =
-        repositoryNames.flatMap(repo => Seq(repo, s"unpinned_$repo")).distinct
-
-      val matchingRepositories =
-        for {
-          repo <- bzlmodRepositoryNames
-          entry <- scanned.bzlmodEntriesBySuffix.getOrElse(repo, Nil)
-          if entry.isDirectory
-        } yield entry
-
-      val candidateRepositories = extensionPrefix match {
-        case Some(prefix) =>
-          val (preferred, others) =
-            matchingRepositories.partition(_.filename.startsWith(prefix))
-          (preferred ++ others).distinct
-        case None =>
-          matchingRepositories.distinct
-      }
-
-      val repositoryRelativePaths = relativePaths.flatMap { path =>
-        path +: bzlmodRepositoryNames.map(repo => path.stripPrefix(s"$repo/"))
-      }.distinct
-
-      val found = candidateRepositories.collectFirst(
-        Function.unlift { repo =>
-          repositoryRelativePaths
-            .map(path => repo.resolve(path))
-            .find(_.exists)
-        }
-      )
-
-      if (candidateRepositories.nonEmpty && found.isEmpty) {
-        scribe.debug(
-          s"JAR not found in central maven repos " +
-            s"${candidateRepositories.map(_.filename).mkString(", ")}; " +
-            s"tried: [${repositoryRelativePaths.mkString(", ")}]"
+  ): Option[AbsolutePath] =
+    extensionPrefix match {
+      case Some(prefix) =>
+        findInBzlmodCentralRepositories(
+          scanned,
+          relativePaths,
+          repositoryNames,
+          _.filename.startsWith(prefix),
         )
-      }
+          .orElse(findDirectInExternalDir(scanned, relativePaths))
+          .orElse(
+            findInBzlmodCentralRepositories(
+              scanned,
+              relativePaths,
+              repositoryNames,
+              !_.filename.startsWith(prefix),
+            )
+          )
+      case None =>
+        findDirectInExternalDir(scanned, relativePaths).orElse(
+          findInBzlmodCentralRepositories(
+            scanned,
+            relativePaths,
+            repositoryNames,
+            _ => true,
+          )
+        )
+    }
 
-      found.map { maybeSymlink =>
-        // The "unpinned" repository is a symlink to the actual location of the artifacts.
-        // If the workspace uses the lock file, this symlink may be removed automatically
-        // once the dependencies have been pinned.
-        // To ensure the JAR is still found, we need to dealias the symlink.
-        val actualPath = maybeSymlink.dealias
-        scribe.debug(s"Dealiased $maybeSymlink to $actualPath")
-        actualPath
+  private def findDirectInExternalDir(
+      scanned: ScannedExtDir,
+      relativePaths: Seq[String],
+  ): Option[AbsolutePath] =
+    relativePaths.map(path => scanned.dir.resolve(path)).find(_.exists)
+
+  private def findInBzlmodCentralRepositories(
+      scanned: ScannedExtDir,
+      relativePaths: Seq[String],
+      repositoryNames: Seq[String],
+      entryFilter: AbsolutePath => Boolean,
+  ): Option[AbsolutePath] = {
+    val bzlmodRepositoryNames =
+      repositoryNames.flatMap(repo => Seq(repo, s"unpinned_$repo")).distinct
+
+    val candidateRepositories = (for {
+      repo <- bzlmodRepositoryNames
+      entry <- scanned.bzlmodEntriesBySuffix.getOrElse(repo, Nil)
+      if entryFilter(entry) && entry.isDirectory
+    } yield entry).distinct
+
+    val repositoryRelativePaths = relativePaths.flatMap { path =>
+      path +: bzlmodRepositoryNames.map(repo => path.stripPrefix(s"$repo/"))
+    }.distinct
+
+    val found = candidateRepositories.collectFirst(
+      Function.unlift { repo =>
+        repositoryRelativePaths
+          .map(path => repo.resolve(path))
+          .find(_.exists)
       }
+    )
+
+    if (candidateRepositories.nonEmpty && found.isEmpty) {
+      scribe.debug(
+        s"JAR not found in central maven repos " +
+          s"${candidateRepositories.map(_.filename).mkString(", ")}; " +
+          s"tried: [${repositoryRelativePaths.mkString(", ")}]"
+      )
+    }
+
+    found.map { maybeSymlink =>
+      // The "unpinned" repository is a symlink to the actual location of the artifacts.
+      // If the workspace uses the lock file, this symlink may be removed automatically
+      // once the dependencies have been pinned.
+      // To ensure the JAR is still found, we need to dealias the symlink.
+      val actualPath = maybeSymlink.dealias
+      scribe.debug(s"Dealiased $maybeSymlink to $actualPath")
+      actualPath
     }
   }
 
@@ -197,57 +222,19 @@ trait MavenLockFileParser {
       repositoryNames: Seq[String],
       extDirs: Seq[ScannedExtDir],
       extensionPrefix: Option[String] = None,
-  ): Option[String] = {
-    val groupPath = groupId.replace('.', '/')
-    val jarName = s"$artifactId-$version.jar"
-
-    val bzlmodArtifactDir =
-      MavenLockFileParser.toBzlmodArtifactDir(groupId, artifactId, version)
-
-    val workspacePatterns =
-      workspaceArtifactPatterns(
-        repositoryNames,
-        groupPath,
-        artifactId,
-        version,
-        jarName,
-      )
-
-    extDirs.view
-      .flatMap { scanned =>
-        findBzlmodJar(
-          scanned,
-          Seq(bzlmodArtifactDir),
-          groupPath,
-          artifactId,
-          version,
-          jarName,
-          extensionPrefix,
-        )
-          .orElse(
-            findInExternalRepositories(
-              scanned,
-              workspacePatterns,
-              repositoryNames,
-              extensionPrefix,
-            )
-          )
-      }
-      .headOption
-      .orElse {
-        val m2Path = Path.of(
-          System.getProperty("user.home"),
-          ".m2",
-          "repository",
-          groupPath,
-          artifactId,
-          version,
-          jarName,
-        )
-        if (Files.exists(m2Path)) Some(AbsolutePath(m2Path)) else None
-      }
-      .map(_.toURI.toString)
-  }
+  ): Option[String] =
+    findArtifactPath(
+      groupId,
+      artifactId,
+      version,
+      fileName = s"$artifactId-$version.jar",
+      bzlmodDirs = Seq(
+        MavenLockFileParser.toBzlmodArtifactDir(groupId, artifactId, version)
+      ),
+      repositoryNames,
+      extDirs,
+      extensionPrefix,
+    )
 
   /**
    * Find the sources JAR file.
@@ -259,45 +246,87 @@ trait MavenLockFileParser {
       repositoryNames: Seq[String],
       extDirs: Seq[ScannedExtDir],
       extensionPrefix: Option[String] = None,
+  ): Option[String] =
+    findArtifactPath(
+      groupId,
+      artifactId,
+      version,
+      fileName = s"$artifactId-$version-sources.jar",
+      bzlmodDirs =
+        MavenLockFileParser.toBzlmodSourcesDirs(groupId, artifactId, version),
+      repositoryNames,
+      extDirs,
+      extensionPrefix,
+    )
+
+  private def findArtifactPath(
+      groupId: String,
+      artifactId: String,
+      version: String,
+      fileName: String,
+      bzlmodDirs: Seq[String],
+      repositoryNames: Seq[String],
+      extDirs: Seq[ScannedExtDir],
+      extensionPrefix: Option[String],
   ): Option[String] = {
     val groupPath = groupId.replace('.', '/')
-    val sourcesJarName = s"$artifactId-$version-sources.jar"
-
-    val bzlmodSourcesDirs =
-      MavenLockFileParser.toBzlmodSourcesDirs(groupId, artifactId, version)
-
     val workspacePatterns =
       workspaceArtifactPatterns(
         repositoryNames,
         groupPath,
         artifactId,
         version,
-        sourcesJarName,
+        fileName,
       )
 
-    extDirs.view
-      .flatMap { scanned =>
-        findBzlmodJar(
-          scanned,
-          bzlmodSourcesDirs,
-          groupPath,
-          artifactId,
-          version,
-          sourcesJarName,
-          extensionPrefix,
-        )
-          .orElse(
-            findInExternalRepositories(
-              scanned,
-              workspacePatterns,
-              repositoryNames,
-              extensionPrefix,
-            )
+    def searchExtDirs(
+        entryFilter: AbsolutePath => Boolean,
+        includeDirectWorkspace: Boolean,
+    ): Option[AbsolutePath] =
+      extDirs.collectFirst(
+        Function.unlift { scanned =>
+          findBzlmodJar(
+            scanned,
+            bzlmodDirs,
+            groupPath,
+            artifactId,
+            version,
+            fileName,
+            entryFilter,
           )
-      }
-      .headOption
+            .orElse(
+              if (includeDirectWorkspace)
+                findDirectInExternalDir(scanned, workspacePatterns)
+              else None
+            )
+            .orElse(
+              findInBzlmodCentralRepositories(
+                scanned,
+                workspacePatterns,
+                repositoryNames,
+                entryFilter,
+              )
+            )
+        }
+      )
+
+    val inExternalDirs = extensionPrefix match {
+      case Some(prefix) =>
+        searchExtDirs(
+          _.filename.startsWith(prefix),
+          includeDirectWorkspace = false,
+        ).orElse(
+          searchExtDirs(
+            !_.filename.startsWith(prefix),
+            includeDirectWorkspace = true,
+          )
+        )
+      case None =>
+        searchExtDirs(_ => true, includeDirectWorkspace = true)
+    }
+
+    inExternalDirs
       .orElse {
-        // Fall back to local Maven cache
         val m2Path = Path.of(
           System.getProperty("user.home"),
           ".m2",
@@ -305,7 +334,7 @@ trait MavenLockFileParser {
           groupPath,
           artifactId,
           version,
-          sourcesJarName,
+          fileName,
         )
         if (Files.exists(m2Path)) Some(AbsolutePath(m2Path)) else None
       }
@@ -339,20 +368,13 @@ trait MavenLockFileParser {
       artifactId: String,
       version: String,
       jarName: String,
-      extensionPrefix: Option[String],
+      entryFilter: AbsolutePath => Boolean,
   ): Option[AbsolutePath] = {
-    val matches =
-      artifactDirs.flatMap(dir =>
-        scanned.bzlmodEntriesBySuffix.getOrElse(dir, Nil)
-      )
-    val candidates = extensionPrefix match {
-      case Some(prefix) =>
-        val (preferred, others) =
-          matches.partition(_.filename.startsWith(prefix))
-        (preferred ++ others).distinct
-      case None =>
-        matches.distinct
-    }
+    val candidates =
+      artifactDirs
+        .flatMap(dir => scanned.bzlmodEntriesBySuffix.getOrElse(dir, Nil))
+        .filter(entryFilter)
+        .distinct
 
     candidates.collectFirst(
       Function.unlift { dir =>

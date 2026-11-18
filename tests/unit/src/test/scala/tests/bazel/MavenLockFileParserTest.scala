@@ -583,4 +583,64 @@ class MavenLockFileParserTest extends BaseSuite {
     }
   }
 
+  test("preferred-extension-prefix-central-over-other-per-artifact") {
+    val workspaceRoot =
+      AbsolutePath(Files.createTempDirectory("preferred-central-layout-test"))
+    try {
+      val extDir = workspaceRoot.resolve("external")
+      // Non-preferred extension (+other+) has per-artifact binary & sources JARs,
+      // while preferred extension (+mine+) stores them in its central repository layout.
+      val otherPerArtifactJar = extDir.resolve(
+        "+other+org_example_alpha_1_0/file/alpha-1.0.jar"
+      )
+      val otherPerArtifactSources = extDir.resolve(
+        "+other+org_example_alpha_sources_1_0/file/alpha-1.0-sources.jar"
+      )
+      val mineCentralJar = extDir.resolve(
+        "+mine+unpinned_maven/v1/https/repo1.maven.org/maven2/org/example/alpha/1.0/alpha-1.0.jar"
+      )
+      val mineCentralSources = extDir.resolve(
+        "+mine+unpinned_maven/v1/https/repo1.maven.org/maven2/org/example/alpha/1.0/alpha-1.0-sources.jar"
+      )
+      Seq(
+        otherPerArtifactJar,
+        otherPerArtifactSources,
+        mineCentralJar,
+        mineCentralSources,
+      ).foreach(_.writeBytes(Array.emptyByteArray))
+
+      val lockJson = gson.fromJson(
+        """|{
+           |  "artifacts": {
+           |    "org.example:alpha": {
+           |      "shasums": { "jar": "aaa", "sources": "bbb" },
+           |      "version": "1.0"
+           |    }
+           |  }
+           |}
+           |""".stripMargin,
+        classOf[JsonObject],
+      )
+
+      val scanned = ScannedExtDir(extDir, extDir.list.toList)
+      val modules = MavenLockFileParser
+        .create(lockJson)
+        .get
+        .parse(Seq("maven"), Seq(scanned), Some("+mine+"))
+
+      assertEquals(
+        modules,
+        Seq(
+          MbtDependencyModule(
+            "org.example:alpha:1.0",
+            mineCentralJar.dealias.toURI.toString,
+            mineCentralSources.dealias.toURI.toString,
+          )
+        ),
+      )
+    } finally {
+      workspaceRoot.deleteRecursively()
+    }
+  }
+
 }
