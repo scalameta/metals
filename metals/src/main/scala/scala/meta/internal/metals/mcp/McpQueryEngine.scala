@@ -245,14 +245,8 @@ class McpQueryEngine(
       buildTargets.buildTargetSources(id).headOption
 
     val choice = chooseTarget(fqcn, module, path)
-    val preferred = choice match {
-      case TargetChoice.ByModule(id) => firstSource(id).orElse(path)
-      case _ => path.orElse(choice.target.flatMap(firstSource))
-    }
-
-    // Source-less modules still need a path for reference lookup.
-    preferred
-      .orElse(allNonMetaTargets.flatMap(firstSource).headOption)
+    McpQueryEngine
+      .usagesSource(choice, path, allNonMetaTargets, firstSource)
       .map { source =>
         referenceProvider
           .workspaceReferences(
@@ -559,11 +553,11 @@ object SymbolType {
 
 object McpQueryEngine {
 
-  private sealed trait TargetChoice {
+  private[mcp] sealed trait TargetChoice {
     def target: Option[BuildTargetIdentifier]
   }
 
-  private object TargetChoice {
+  private[mcp] object TargetChoice {
     case class ByModule(id: BuildTargetIdentifier) extends TargetChoice {
       def target: Option[BuildTargetIdentifier] = Some(id)
     }
@@ -575,6 +569,20 @@ object McpQueryEngine {
         target: Option[BuildTargetIdentifier],
         searched: Seq[BuildTargetIdentifier],
     ) extends TargetChoice
+  }
+
+  private[mcp] def usagesSource(
+      choice: TargetChoice,
+      path: Option[AbsolutePath],
+      targets: Seq[BuildTargetIdentifier],
+      firstSource: BuildTargetIdentifier => Option[AbsolutePath],
+  ): Option[AbsolutePath] = {
+    val preferred = choice match {
+      case TargetChoice.ByModule(id) => firstSource(id).orElse(path)
+      case _ => path.orElse(choice.target.flatMap(firstSource))
+    }
+    // Source-less modules still need a path for reference lookup.
+    preferred.orElse(targets.flatMap(firstSource).headOption)
   }
 
   /**
