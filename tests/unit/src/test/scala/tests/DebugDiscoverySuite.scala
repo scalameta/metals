@@ -681,7 +681,7 @@ class DebugDiscoverySuite
         discovery.getTargets().asScala.map(_.getUri()).toList,
         List(server.buildTarget("a")),
       )
-      discovery.asScalaMainClass match {
+      discovery.asScalaMainClass() match {
         case Left(err) => sys.error(s"Expected Main class ($err)")
         case Right(scalaMainClass) =>
           assertNoDiff(
