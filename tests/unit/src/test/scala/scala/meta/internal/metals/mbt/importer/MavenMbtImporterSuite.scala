@@ -61,6 +61,9 @@ class MavenMbtImporterSuite extends FunSuite {
       )
       val xml = new String(Files.readAllBytes(file), "UTF-8")
       assert(xml.contains(MavenMbtImporter.centralSnapshotsUrl), xml)
+      val id = MavenMbtImporter.snapshotsProfileId
+      assert(xml.contains(s"<id>$id</id>"), xml)
+      assert(xml.contains(s"<activeProfile>$id</activeProfile>"), xml)
     } finally Files.deleteIfExists(file)
   }
 

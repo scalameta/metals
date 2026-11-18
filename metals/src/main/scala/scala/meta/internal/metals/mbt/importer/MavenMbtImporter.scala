@@ -117,11 +117,15 @@ object MavenMbtImporter {
   val centralSnapshotsUrl: String =
     "https://central.sonatype.com/repository/maven-snapshots/"
 
+  // Specific enough not to clash with a profile in the user's settings.xml,
+  // which Maven would otherwise prefer over ours.
+  val snapshotsProfileId: String = "metals-mbt-central-snapshots-plugin-repo"
+
   val snapshotPluginSettingsXml: String =
     s"""|<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
         |  <profiles>
         |    <profile>
-        |      <id>metals-snapshots</id>
+        |      <id>$snapshotsProfileId</id>
         |      <pluginRepositories>
         |        <pluginRepository>
         |          <id>central-snapshots</id>
@@ -133,7 +137,7 @@ object MavenMbtImporter {
         |    </profile>
         |  </profiles>
         |  <activeProfiles>
-        |    <activeProfile>metals-snapshots</activeProfile>
+        |    <activeProfile>$snapshotsProfileId</activeProfile>
         |  </activeProfiles>
         |</settings>
         |""".stripMargin
