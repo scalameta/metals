@@ -12,7 +12,7 @@ import scala.concurrent.duration.Duration
 
 import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.JdkSources
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.TestFrameworkUtils
 import scala.meta.internal.metals.debug.server.BuildToolDebugAdapter
