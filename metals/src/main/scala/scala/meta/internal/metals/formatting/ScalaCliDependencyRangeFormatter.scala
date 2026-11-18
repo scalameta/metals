@@ -4,7 +4,7 @@ import scala.meta.internal.metals.formatting.RangeFormatter
 import scala.meta.internal.metals.formatting.RangeFormatterParams
 import scala.meta.internal.metals.scalacli.DependencyConverter
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 object ScalaCliDependencyRangeFormatter extends RangeFormatter {
 

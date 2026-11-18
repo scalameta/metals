@@ -3,7 +3,7 @@ package scala.meta.metals
 import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo

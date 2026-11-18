@@ -12,7 +12,7 @@ import scala.meta.internal.metals.DefinitionProviderReportBuilder
 import scala.meta.internal.metals.DefinitionResult
 import scala.meta.internal.metals.FolderReportsZippper
 import scala.meta.internal.metals.Icons
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportFileName
 import scala.meta.internal.metals.ScalaVersionSelector

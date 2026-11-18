@@ -5,7 +5,7 @@ import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.ExcludedPackagesHandler
 import scala.meta.internal.metals.InlayHintsOptions
 import scala.meta.internal.metals.JavaFormatterConfig
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.CompilerProgressConfig
 import scala.meta.internal.metals.config.DefinitionProviderConfig
 import scala.meta.internal.metals.config.EclipseFormatConfig
@@ -15,7 +15,7 @@ import scala.meta.internal.metals.config.JavaSymbolLoaderConfig
 import scala.meta.internal.metals.config.ReferenceProviderConfig
 import scala.meta.internal.metals.config.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
-import scala.meta.internal.metals.config.option._
+import scala.meta.internal.metals.config.option.*
 import scala.meta.internal.mtags.Symbol
 import scala.meta.pc.PresentationCompilerConfig
 
@@ -34,7 +34,7 @@ object UserConfigurationOptions {
       .mkString("\n")
       .replace("/", ".")
 
-  def settings: List[UserConfigurationOption[_]] = List(
+  def settings: List[UserConfigurationOption[?]] = List(
     /*
      * {
      *   "javaHome": "/Library/Java/JavaVirtualMachines/jdk1.8.0_192.jdk/Contents/Home"

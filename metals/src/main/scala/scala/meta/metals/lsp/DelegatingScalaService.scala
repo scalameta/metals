@@ -16,8 +16,8 @@ import scala.meta.internal.tvp.TreeViewParentParams
 import scala.meta.internal.tvp.TreeViewParentResult
 import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
 
-import org.eclipse.lsp4j._
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
+import org.eclipse.lsp4j.*
+import org.eclipse.lsp4j.jsonrpc.messages.Either as JEither
 
 /**
  * Delegating Scala LSP service which forwards all requests to the underlying

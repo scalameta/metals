@@ -12,7 +12,7 @@ import scala.util.Try
 import scala.util.control.NonFatal
 import scala.xml.XML
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 

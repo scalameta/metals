@@ -2,12 +2,12 @@ package tests
 
 import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.EmptyReportContext
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags.JavacMtags
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.SemanticdbPrinter
-import scala.meta.internal.mtags.SemanticdbRanges._
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.mtags.SemanticdbRanges.*
+import scala.meta.internal.semanticdb as s
 
 import tests.InputFile
 

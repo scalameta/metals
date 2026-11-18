@@ -11,7 +11,7 @@ import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.debug.server.Discovered
 
 import coursier.Dependency
-import org.scalatools.testing.{Framework => OldFramework}
+import org.scalatools.testing.Framework as OldFramework
 import sbt.testing.AnnotatedFingerprint
 import sbt.testing.Fingerprint
 import sbt.testing.Framework

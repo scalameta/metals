@@ -3,7 +3,7 @@ package tests.scalacli
 import java.util.concurrent.TimeUnit
 
 import scala.meta.internal.metals.DebugDiscoveryParams
-import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.JsonParser.*
 import scala.meta.internal.metals.scalacli.ScalaCli
 
 import tests.BaseDapSuite

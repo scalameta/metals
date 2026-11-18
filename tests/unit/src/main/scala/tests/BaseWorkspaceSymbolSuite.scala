@@ -6,7 +6,7 @@ import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.io.AbsolutePath
 
 import munit.Location
-import tests.MetalsTestEnrichments._
+import tests.MetalsTestEnrichments.*
 
 abstract class BaseWorkspaceSymbolSuite extends BaseSuite {
   def workspace: AbsolutePath

@@ -1,7 +1,7 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.Messages.NewScalaFile
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ExtractRenameMember

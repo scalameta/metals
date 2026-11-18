@@ -1,6 +1,6 @@
 package tests.scalafix
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.RunScalafixRulesParams

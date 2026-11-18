@@ -3,7 +3,7 @@ package tests
 import java.nio.file.StandardCopyOption
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 import org.eclipse.lsp4j.CreateFile
 import org.eclipse.lsp4j.CreateFileOptions

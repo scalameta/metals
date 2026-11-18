@@ -2,7 +2,7 @@ package tests
 
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 class AutoImportLspSuite extends BaseCompletionLspSuite("auto-import") {
 

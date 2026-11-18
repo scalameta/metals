@@ -37,7 +37,7 @@ import scala.meta.internal.metals.DismissedNotifications
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsBspException
 import scala.meta.internal.metals.MetalsBuildServer
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ServerLivenessMonitor
@@ -54,7 +54,7 @@ import scala.meta.internal.pc.InterruptException
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j._
+import ch.epfl.scala.bsp4j.*
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException
 import org.eclipse.lsp4j.jsonrpc.MessageIssueException
 

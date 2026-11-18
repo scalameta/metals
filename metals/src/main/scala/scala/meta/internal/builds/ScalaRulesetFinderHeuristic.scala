@@ -2,7 +2,7 @@ package scala.meta.internal.builds
 
 import scala.util.matching.UnanchoredRegex
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 class ScalaRulesetFinderHeuristic private (
@@ -13,7 +13,7 @@ class ScalaRulesetFinderHeuristic private (
   private lazy val moduleFileContent = moduleFile.flatMap(_.readTextOpt)
 
   def guessRulesetName(): Option[String] = {
-    import ScalaRulesetFinderHeuristic._
+    import ScalaRulesetFinderHeuristic.*
     // First try the module file, because it is the default since Bazel 7
     val fromModuleFile = moduleFileContent.collect {
       // The name of the repo that contains the module from which we load the "scala_config" extension

@@ -5,7 +5,7 @@ import java.nio.file.Paths
 
 import scala.meta.internal.metals.BspStatus
 import scala.meta.internal.metals.Icons
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatusBarConfig
 import scala.meta.internal.metals.clients.language.MetalsStatusParams

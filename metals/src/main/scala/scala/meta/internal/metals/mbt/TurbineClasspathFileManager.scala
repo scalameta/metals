@@ -1,14 +1,14 @@
 package scala.meta.internal.metals.mbt
 
 import java.nio.file.ClosedFileSystemException
-import java.{util => ju}
+import java.util as ju
 import javax.tools.FileObject
 import javax.tools.ForwardingJavaFileManager
 import javax.tools.JavaFileManager
 import javax.tools.JavaFileObject
 import javax.tools.StandardLocation
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.*
 import scala.collection.mutable.Buffer
 import scala.util.control.NonFatal
 

@@ -1,6 +1,6 @@
 package scala.meta.internal.metals.config.option
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.UserConfiguration
 
 import com.google.gson.JsonObject
@@ -13,7 +13,7 @@ case class ObjectConfigurationOption[A](
     val default: String,
     val defaultValue: A,
     val oldNames: List[String] = List.empty,
-    val subFields: List[ConfigurationOption[_, A]],
+    val subFields: List[ConfigurationOption[?, A]],
 )(
     getter: UserConfiguration => A,
     setter: (UserConfiguration, A) => UserConfiguration,
@@ -33,7 +33,7 @@ case class ObjectConfigurationOption[A](
   def write(value: A): Option[Any] = {
 
     def fromField(
-        field: ConfigurationOption[_, A],
+        field: ConfigurationOption[?, A],
         value: Any,
     ): Option[(String, Any)] = {
       val keys = field.camelCaseKey.split("\\.")

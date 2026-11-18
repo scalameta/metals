@@ -7,13 +7,13 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
-import scala.meta.internal.bsp.BspConfigGenerationStatus._
+import scala.meta.internal.bsp.BspConfigGenerationStatus.*
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.Messages.BspProvider
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.io.AbsolutePath

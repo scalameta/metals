@@ -57,9 +57,9 @@ object McpMain {
       case _ => false
     }
 
-  private val flattenedSettings: List[ConfigurationOption[_, _]] =
+  private val flattenedSettings: List[ConfigurationOption[?, ?]] =
     UserConfigurationOptions.settings.flatMap {
-      case o: ObjectConfigurationOption[_] =>
+      case o: ObjectConfigurationOption[?] =>
         o.subFields
       case other => List(other)
     }
@@ -68,7 +68,7 @@ object McpMain {
   private val configKeys: Set[String] =
     UserConfigurationOptions.settings
       .flatMap {
-        case o: ObjectConfigurationOption[_] =>
+        case o: ObjectConfigurationOption[?] =>
           o.subFields.map(field => o.key + "." + field.key)
         case other => List(other.key)
       }

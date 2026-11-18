@@ -1,8 +1,8 @@
 package tests
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 object CodeLensesTextEdits {
   def apply(

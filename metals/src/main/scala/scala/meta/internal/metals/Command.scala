@@ -3,10 +3,10 @@ package scala.meta.internal.metals
 import scala.reflect.ClassTag
 import scala.util.matching.Regex
 
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.JsonParser.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 sealed trait BaseCommand {
   def id: String

@@ -6,15 +6,15 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 import ch.epfl.scala.bsp4j
 import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
+import org.eclipse.lsp4j as l
 import org.eclipse.lsp4j.jsonrpc.json.MessageJsonHandler
-import org.eclipse.{lsp4j => l}
 
 object ScalacDiagnostic {
 

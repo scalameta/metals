@@ -8,7 +8,7 @@ import scala.meta.internal.metals.config.StatusBarState
 import scala.meta.internal.pc.CompilerInitializationOptions
 
 import com.google.gson.JsonObject
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 /**
  * This is the preferred way to configure Metals from the client.
@@ -100,7 +100,7 @@ final case class InitializationOptions(
 }
 
 object InitializationOptions {
-  import scala.meta.internal.metals.JsonParser._
+  import scala.meta.internal.metals.JsonParser.*
 
   val Default: InitializationOptions = InitializationOptions(
     CompilerInitializationOptions.default,

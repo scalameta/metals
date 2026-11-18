@@ -15,7 +15,7 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.DismissedNotifications
 import scala.meta.internal.metals.Messages.RequestTimeout
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 

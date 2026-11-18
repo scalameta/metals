@@ -1,11 +1,11 @@
 package scala.meta.internal.metals.codeactions
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.logging
 import scala.meta.io.AbsolutePath
 
 import com.google.gson.JsonObject
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 object CodeActionBuilder {
   type DocumentChange = Either[l.TextDocumentEdit, l.ResourceOperation]

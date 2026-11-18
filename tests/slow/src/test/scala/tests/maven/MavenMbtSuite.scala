@@ -4,7 +4,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -519,7 +519,7 @@ class MavenMbtSuite extends munit.FunSuite {
         pluginGoal,
         s"-DmbtOutputFile=$outputFile",
       ) ::: toolchainsArgs
-    val pb = new ProcessBuilder(command: _*)
+    val pb = new ProcessBuilder(command*)
       .directory(workspace.toFile)
       .inheritIO()
     val exitCode = pb.start().waitFor()
@@ -549,7 +549,7 @@ class MavenMbtSuite extends munit.FunSuite {
     val resolved = entries.toList.map { case (version, vendor, name) =>
       (version, vendor, fakeJdk(workspace, name, s"$version.0.1"))
     }
-    writeToolchains(workspace.resolve("toolchains.xml"), resolved: _*)
+    writeToolchains(workspace.resolve("toolchains.xml"), resolved*)
   }
 
   private def writeToolchains(
