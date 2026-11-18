@@ -20,6 +20,7 @@ import io.modelcontextprotocol.server.McpServer
 import io.modelcontextprotocol.server.transport.HttpServletStreamableServerTransportProvider
 import io.undertow.Undertow
 import io.undertow.servlet.Servlets
+import io.undertow.servlet.api.InstanceFactory
 import io.undertow.servlet.api.InstanceHandle
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
@@ -73,13 +74,18 @@ class MetalsMcpServer(
           .servlet(
             "SseServlet",
             classOf[HttpServletStreamableServerTransportProvider],
-            () =>
-              new InstanceHandle[HttpServletStreamableServerTransportProvider] {
-                override def getInstance()
-                    : HttpServletStreamableServerTransportProvider = servlet
-                override def release(): Unit = { servlet.close() }
-
-              },
+            new InstanceFactory[HttpServletStreamableServerTransportProvider] {
+              override def createInstance(): InstanceHandle[
+                HttpServletStreamableServerTransportProvider
+              ] =
+                new InstanceHandle[
+                  HttpServletStreamableServerTransportProvider
+                ] {
+                  override def getInstance()
+                      : HttpServletStreamableServerTransportProvider = servlet
+                  override def release(): Unit = { servlet.close() }
+                }
+            },
           )
           .setAsyncSupported(true)
           .addMapping("/*")
