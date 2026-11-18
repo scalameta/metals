@@ -9,7 +9,7 @@ object V {
 
   val scala3 = "3.3.9"
 
-  val scala3ForSBT2 = "3.8.4"
+  val scala3ForSBT2 = "3.9.0"
 
   val latestScala3Next = "3.10.1"
 
@@ -80,7 +80,7 @@ object V {
 
   val scribe = "3.19.1"
 
-  val sbt2Version = "2.0.12"
+  val sbt2Version = "2.1.0"
 
   // sbt 1 version recommended to users and used to generate test builds.
   // The Metals build itself is sbt 2; see project/build.properties.
