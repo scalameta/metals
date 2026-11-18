@@ -5,16 +5,16 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
-import scala.meta.{inputs => m}
+import scala.meta.inputs as m
 
 import com.google.googlejavaformat.java.FormatterException
 import com.google.googlejavaformat.java.ImportOrderer
 import com.google.googlejavaformat.java.JavaFormatterOptions.Style
 import com.google.googlejavaformat.java.RemoveUnusedImports
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 /**
  * Removes unused imports and sorts the remaining ones in a Java file without
