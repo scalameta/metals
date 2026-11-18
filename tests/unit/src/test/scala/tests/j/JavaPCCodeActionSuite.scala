@@ -120,7 +120,7 @@ class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
       )
       _ <- server.didOpen(path)
       _ <- server.didFocus(path)
-      _ <- server.assertCodeAction(
+      codeActions <- server.assertCodeAction(
         path,
         s"""|package a;
             |
@@ -132,6 +132,20 @@ class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
         s"""|${SourceAddMissingImports.title}
             |""".stripMargin,
         List(SourceAddMissingImports.kind),
+      )
+      _ <- client.applyCodeAction(0, codeActions, server)
+      _ = assertNoDiff(
+        server.bufferContents(path),
+        """|package a;
+           |
+           |import java.nio.file.Path;
+           |import java.time.Instant;
+           |
+           |public class Example {
+           |  public static Path path = null;
+           |  public static Instant now = null;
+           |}
+           |""".stripMargin,
       )
     } yield ()
   }
