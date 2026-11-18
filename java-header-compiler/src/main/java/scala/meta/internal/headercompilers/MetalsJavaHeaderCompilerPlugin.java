@@ -13,6 +13,7 @@ import com.sun.tools.javac.code.Symbol.ClassSymbol;
 import com.sun.tools.javac.code.TypeTag;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.*;
+import com.sun.tools.javac.tree.TreeInfo;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.tree.TreeTranslator;
 import com.sun.tools.javac.util.Context;
@@ -122,6 +123,7 @@ public class MetalsJavaHeaderCompilerPlugin implements Plugin {
     private int annotationTypeLevel = 0;
     private int classLevel = 0;
     private int executableLevel = 0;
+    private boolean interfaceContext = false;
     private final Map<Name, EnumInfo> enumInfoByName = new HashMap<>();
 
     public BodyRemoverTranslator(Context context, Trees trees) {
@@ -132,6 +134,8 @@ public class MetalsJavaHeaderCompilerPlugin implements Plugin {
     @Override
     public void visitClassDef(JCClassDecl classDecl) {
       boolean isAnnotation = (classDecl.mods.flags & Flags.ANNOTATION) != 0;
+      boolean previousInterfaceContext = interfaceContext;
+      interfaceContext = (classDecl.mods.flags & Flags.INTERFACE) != 0;
       Map<Name, EnumInfo> newlyRegisteredEnums = registerLocalEnums(classDecl);
       enumInfoByName.putAll(newlyRegisteredEnums);
       classLevel++;
@@ -145,6 +149,7 @@ public class MetalsJavaHeaderCompilerPlugin implements Plugin {
           annotationTypeLevel--;
         }
         classLevel--;
+        interfaceContext = previousInterfaceContext;
         for (Map.Entry<Name, EnumInfo> entry : newlyRegisteredEnums.entrySet()) {
           Name enumName = entry.getKey();
           EnumInfo registeredInfo = entry.getValue();
@@ -174,7 +179,19 @@ public class MetalsJavaHeaderCompilerPlugin implements Plugin {
 
       boolean isConstructor = methodDecl.getName().toString().equals("<init>");
       if (isConstructor) {
-        methodDecl.body = treeMaker.Block(0, List.nil());
+        // Dropping an explicit this(...) or super(...) invents an implicit
+        // super(), which can make a valid dependency fail attribution and stop
+        // flow analysis before javac reports errors in kept callers. Keep only
+        // that invocation, including its arguments and original positions.
+        if (methodDecl.body == null) {
+          methodDecl.body = treeMaker.Block(0, List.nil());
+        } else {
+          List<JCStatement> statements = methodDecl.body.stats;
+          methodDecl.body.stats =
+              statements.nonEmpty() && TreeInfo.isSelfCall(statements.head)
+                  ? List.of(statements.head)
+                  : List.nil();
+        }
         executableLevel++;
         try {
           super.visitMethodDef(methodDecl);
@@ -244,10 +261,109 @@ public class MetalsJavaHeaderCompilerPlugin implements Plugin {
       boolean isEnumConstant = (varDecl.mods.flags & Flags.ENUM) != 0;
       boolean isFieldContext = classLevel > 0 && executableLevel == 0;
       if (isFieldContext && !isParameter && !isEnumConstant) {
-        TypeKind fieldTypeKind = getTypeKindFromTree(varDecl.getType());
-        varDecl.init = getDefaultValue(varDecl.getType(), fieldTypeKind);
+        // Constant values remain part of the header: retained constructor
+        // arguments and kept callers can use them as switch labels. This runs
+        // before attribution: this is only a syntactic filter, and javac owns
+        // name resolution and type checking, including errors in invalid source.
+        // Keep pruning nonconstant initializers.
+        boolean isFinal = (varDecl.mods.flags & Flags.FINAL) != 0 || interfaceContext;
+        boolean constantCandidate =
+            isFinal
+                && isConstantTypeSyntax(varDecl.getType())
+                && hasConstantExpressionSyntax(varDecl.init);
+        if (!constantCandidate) {
+          if (isFinal
+              && TreeInfo.typeIn(varDecl.vartype) instanceof JCPrimitiveTypeTree primitive) {
+            varDecl.init = getNonconstantPrimitiveDefault(primitive, varDecl);
+          } else {
+            TypeKind fieldTypeKind = getTypeKindFromTree(varDecl.getType());
+            varDecl.init = getDefaultValue(varDecl.getType(), fieldTypeKind);
+          }
+        }
       }
       super.visitVarDef(varDecl);
+    }
+
+    private JCExpression getNonconstantPrimitiveDefault(
+        JCPrimitiveTypeTree primitive, JCVariableDecl field) {
+      // A literal would turn a final runtime value into a constant variable,
+      // changing reachability in retained code. (new T[1])[0] has the same
+      // default value and primitive type without being a constant expression
+      // or referencing helper methods or wrapper classes.
+      int previousPosition = treeMaker.pos;
+      treeMaker.at(field.init == null ? field.pos : field.init.pos);
+      try {
+        return treeMaker.Indexed(
+            treeMaker.NewArray(
+                treeMaker.TypeIdent(primitive.typetag), List.of(treeMaker.Literal(1)), null),
+            treeMaker.Literal(0));
+      } finally {
+        treeMaker.at(previousPosition);
+      }
+    }
+
+    private boolean isConstantTypeSyntax(Tree tree) {
+      if (tree instanceof JCAnnotatedType annotated) {
+        return isConstantTypeSyntax(annotated.underlyingType);
+      }
+      return tree instanceof PrimitiveTypeTree || (tree != null && isStringType(tree));
+    }
+
+    private boolean hasConstantExpressionSyntax(JCExpression expression) {
+      if (expression == null) {
+        return false;
+      }
+      switch (expression.getKind()) {
+        case BOOLEAN_LITERAL:
+        case CHAR_LITERAL:
+        case INT_LITERAL:
+        case LONG_LITERAL:
+        case FLOAT_LITERAL:
+        case DOUBLE_LITERAL:
+        case STRING_LITERAL:
+        case IDENTIFIER:
+          return true;
+        case MEMBER_SELECT:
+          return hasConstantExpressionSyntax(((JCFieldAccess) expression).selected);
+        case PARENTHESIZED:
+          return hasConstantExpressionSyntax(((JCParens) expression).expr);
+        case TYPE_CAST:
+          JCTypeCast cast = (JCTypeCast) expression;
+          return isConstantTypeSyntax(cast.clazz) && hasConstantExpressionSyntax(cast.expr);
+        case UNARY_PLUS:
+        case UNARY_MINUS:
+        case BITWISE_COMPLEMENT:
+        case LOGICAL_COMPLEMENT:
+          return hasConstantExpressionSyntax(((JCUnary) expression).arg);
+        case CONDITIONAL_EXPRESSION:
+          JCConditional conditional = (JCConditional) expression;
+          return hasConstantExpressionSyntax(conditional.cond)
+              && hasConstantExpressionSyntax(conditional.truepart)
+              && hasConstantExpressionSyntax(conditional.falsepart);
+        case MULTIPLY:
+        case DIVIDE:
+        case REMAINDER:
+        case PLUS:
+        case MINUS:
+        case LEFT_SHIFT:
+        case RIGHT_SHIFT:
+        case UNSIGNED_RIGHT_SHIFT:
+        case LESS_THAN:
+        case GREATER_THAN:
+        case LESS_THAN_EQUAL:
+        case GREATER_THAN_EQUAL:
+        case EQUAL_TO:
+        case NOT_EQUAL_TO:
+        case AND:
+        case XOR:
+        case OR:
+        case CONDITIONAL_AND:
+        case CONDITIONAL_OR:
+          JCBinary binary = (JCBinary) expression;
+          return hasConstantExpressionSyntax(binary.lhs) && hasConstantExpressionSyntax(binary.rhs);
+        default:
+          return false;
+      }
     }
 
     private TypeKind getTypeKindFromTree(Tree typeTree) {
