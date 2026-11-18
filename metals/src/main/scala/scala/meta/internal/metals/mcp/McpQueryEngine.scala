@@ -1,18 +1,18 @@
 package scala.meta.internal.metals.mcp
 
-import java.{util => ju}
+import java.util as ju
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta._
+import scala.meta.*
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.Docstrings
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.metals.mcp.McpPrinter._
+import scala.meta.internal.metals.mcp.McpPrinter.*
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.pc.JavaSourceShortener
 import scala.meta.io.AbsolutePath

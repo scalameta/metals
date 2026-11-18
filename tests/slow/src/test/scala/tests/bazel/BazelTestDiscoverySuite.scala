@@ -3,14 +3,14 @@ package tests.bazel
 import java.util.concurrent.TimeUnit
 
 import scala.concurrent.ExecutionContext
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BazelDigest
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.EmptyWorkDoneProgress
-import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.JsonParser.*
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.Time
 import scala.meta.io.AbsolutePath

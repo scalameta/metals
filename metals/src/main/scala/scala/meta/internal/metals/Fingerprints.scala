@@ -5,7 +5,7 @@ import java.sql.Connection
 import java.sql.PreparedStatement
 
 import scala.meta.internal.metals.Fingerprint
-import scala.meta.internal.metals.JdbcEnrichments._
+import scala.meta.internal.metals.JdbcEnrichments.*
 import scala.meta.io.AbsolutePath
 
 /**

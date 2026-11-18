@@ -1,7 +1,7 @@
 package tests
 
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.{BuildInfo => V}
 
 class WorkspaceFoldersSuite
     extends BaseCompletionLspSuite("workspaceFolderSuite") {

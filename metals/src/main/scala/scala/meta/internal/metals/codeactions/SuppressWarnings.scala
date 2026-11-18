@@ -4,7 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.parsing.JavaAnnotation
 import scala.meta.internal.parsing.JavaMember
 import scala.meta.internal.parsing.JavaRange
@@ -13,13 +13,13 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
 import com.google.gson.JsonPrimitive
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class SuppressWarnings(
     javaTrees: JavaTrees,
     buffers: Buffers,
 ) extends CodeAction {
-  import SuppressWarnings._
+  import SuppressWarnings.*
 
   override def kind: String = l.CodeActionKind.QuickFix
   override def isScala: Boolean = false

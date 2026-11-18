@@ -61,7 +61,7 @@ trait CompletionsAssertions {
   )(
       fn: String => Unit
   ): Future[Unit] = {
-    import scala.jdk.CollectionConverters._
+    import scala.jdk.CollectionConverters.*
     val filename = filenameOpt.getOrElse(
       s"$project/src/main/scala/$project/${project.toUpper}.scala"
     )
@@ -102,7 +102,7 @@ trait CompletionsAssertions {
   )(
       fn: CompletionItem => Unit
   ): Future[Unit] = {
-    import scala.jdk.CollectionConverters._
+    import scala.jdk.CollectionConverters.*
     val filename = filenameOpt.getOrElse(
       s"$project/src/main/scala/$project/${project.toUpper}.scala"
     )

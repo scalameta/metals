@@ -3,7 +3,7 @@ package scala.meta.internal.metals.mbt.importer
 import java.sql.Connection
 import java.sql.Timestamp
 
-import scala.meta.internal.metals.JdbcEnrichments._
+import scala.meta.internal.metals.JdbcEnrichments.*
 import scala.meta.internal.metals.Time
 import scala.meta.io.AbsolutePath
 

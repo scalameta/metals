@@ -10,7 +10,7 @@ package scala.meta.internal.worksheets
  */
 class MdocClassLoader(parent: ClassLoader)
     extends ClassLoader(ClassLoader.getSystemClassLoader.getParent) {
-  override def findClass(name: String): Class[_] = {
+  override def findClass(name: String): Class[?] = {
     val isShared =
       name.startsWith("mdoc.interfaces") || name.startsWith("coursierapi")
     if (isShared) {

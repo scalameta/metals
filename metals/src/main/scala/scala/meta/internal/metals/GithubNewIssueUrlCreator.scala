@@ -90,7 +90,7 @@ class GithubNewIssueUrlCreator(
   ): String = {
     val buildServers =
       foldersInfo.map { info =>
-        import info._
+        import info.*
         val buildServer = currentBuildServer()
           .map(s => s"${s.main.name} v${s.main.version}")
           .getOrElse {

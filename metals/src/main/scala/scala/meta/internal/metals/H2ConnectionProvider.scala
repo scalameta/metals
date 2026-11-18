@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.util.Try
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.Tables.ConnectionState
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath

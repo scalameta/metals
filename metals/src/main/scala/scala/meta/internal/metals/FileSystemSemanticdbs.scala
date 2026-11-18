@@ -4,7 +4,7 @@ import java.nio.charset.Charset
 import java.nio.file.Files
 
 import scala.meta.internal.io.PlatformFileIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.internal.mtags.Md5Fingerprints
 import scala.meta.internal.mtags.SemanticdbClasspath

@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentHashMap
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo

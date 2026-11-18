@@ -4,12 +4,12 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.{util => ju}
+import java.util as ju
 
 import scala.util.Properties
 
 import scala.meta.internal.metals.Directories
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.io.AbsolutePath

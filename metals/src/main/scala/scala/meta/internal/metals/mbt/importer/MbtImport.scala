@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.mbt.importer
 
 import java.nio.file.Files
+import java.util.concurrent.CancellationException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -13,7 +14,7 @@ import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.WorkspaceLoadedStatus
 import scala.meta.internal.metals.Confirmation
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.UserConfiguration
@@ -32,6 +33,13 @@ final class MbtImport(
 
   private lazy val notification = tables.dismissedNotifications.MbtImportChanges
 
+  private sealed trait ProviderResult
+  private object ProviderResult {
+    case class Imported(build: Option[MbtBuild]) extends ProviderResult
+    case object Cancelled extends ProviderResult
+    case object Failed extends ProviderResult
+  }
+
   /**
    * Calls [[MbtImportProvider.extract]] on every provider, reads their output
    * files, merges the results and writes `.metals/mbt.json`.
@@ -47,15 +55,25 @@ final class MbtImport(
       Future
         .sequence(providers.map(runProvider))
         .map { results =>
-          val builds = results.flatten
+          val builds = results.collect {
+            case ProviderResult.Imported(Some(build)) => build
+          }
           if (builds.nonEmpty) {
             val merged = builds.foldLeft(MbtBuild.empty)(MbtBuild.merge)
             writeOutput(merged)
             WorkspaceLoadedStatus.Installed
-          } else WorkspaceLoadedStatus.Failed(-1)
+          } else if (results.contains(ProviderResult.Failed)) {
+            languageClient.showMessage(Messages.ImportProjectFailed)
+            WorkspaceLoadedStatus.Failed(-1)
+          } else if (results.contains(ProviderResult.Cancelled)) {
+            WorkspaceLoadedStatus.Cancelled
+          } else {
+            WorkspaceLoadedStatus.Failed(-1)
+          }
         }
         .recover { case ex =>
           scribe.error("mbt-import: unexpected error during extraction", ex)
+          languageClient.showMessage(Messages.ImportProjectFailed)
           WorkspaceLoadedStatus.Failed(-1)
         }
         .andThen { _ => isImportInProcess.set(false) }
@@ -69,18 +87,22 @@ final class MbtImport(
 
   private def runProvider(
       provider: MbtImportProvider
-  ): Future[Option[MbtBuild]] = {
+  ): Future[ProviderResult] = {
     provider
       .extract(workspace)
       .map { _ =>
-        Try(MbtBuild.fromFile(provider.outputPath(workspace).toNIO)).toOption
-          .flatMap { build =>
-            if (build.isEmpty) None else Some(build)
-          }
+        val maybeBuild =
+          Try(MbtBuild.fromFile(provider.outputPath(workspace).toNIO)).toOption
+            .filter(!_.isEmpty)
+        ProviderResult.Imported(maybeBuild)
       }
-      .recover { case ex =>
-        scribe.error(s"mbt-import: provider '${provider.name}' failed", ex)
-        None
+      .recover {
+        case _: CancellationException =>
+          scribe.info(s"mbt-import: provider '${provider.name}' was cancelled")
+          ProviderResult.Cancelled
+        case ex =>
+          scribe.error(s"mbt-import: provider '${provider.name}' failed", ex)
+          ProviderResult.Failed
       }
   }
 

@@ -3,7 +3,7 @@ package scala.meta.internal.metals.mbt.importer
 import scala.collection.concurrent.TrieMap
 import scala.util.Try
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.mbt.MbtDependencyModule
 import scala.meta.internal.metals.mbt.importer.bazel.MavenLockFileParser
 import scala.meta.internal.semver.SemVer

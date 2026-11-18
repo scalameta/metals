@@ -9,7 +9,7 @@ import scala.meta.Importer
 import scala.meta.Tree
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Diagnostics
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.codeactions.CodeAction
@@ -17,7 +17,7 @@ import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 // Cuts out invalid subsets of or whole imports
 sealed abstract class RemoveInvalidImport(

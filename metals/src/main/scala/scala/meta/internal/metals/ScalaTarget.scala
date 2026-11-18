@@ -5,11 +5,11 @@ import scala.util.Try
 import scala.util.matching.Regex
 
 import scala.meta.Dialect
-import scala.meta.dialects._
+import scala.meta.dialects.*
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.io.PlatformFileIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaTarget.ExperimentalSyntaxRegex
 import scala.meta.internal.metals.ScalaTarget.KindProjectorRegex
 import scala.meta.internal.metals.buildserver.BuildServerConnection

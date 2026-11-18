@@ -4,7 +4,7 @@ import scala.meta.internal.metals.codeactions.InlineValueCodeAction
 
 import munit.Location
 import munit.TestOptions
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 /**
  * End-to-end tests for the "inline value" refactoring code action on Java

@@ -2,7 +2,7 @@ package tests
 
 import java.nio.file.Paths
 
-import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.parsing.JavaFoldingRangeExtractor
 import scala.meta.io.AbsolutePath

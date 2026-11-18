@@ -22,7 +22,7 @@ object Synthetics {
   def foreachSymbol(
       synthetic: Synthetic
   )(fn: String => ForeachResult): ForeachResult = {
-    import scala.meta.internal.semanticdb._
+    import scala.meta.internal.semanticdb.*
     def isStop(t: Tree): Boolean =
       t match {
         case ApplyTree(function, arguments, _) =>

@@ -3,7 +3,7 @@ package scala.meta.internal.builds
 import scala.annotation.nowarn
 import scala.concurrent.Future
 
-import scala.meta.internal.bsp.BspConfigGenerationStatus._
+import scala.meta.internal.bsp.BspConfigGenerationStatus.*
 import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.StatusBar

@@ -8,10 +8,10 @@ import scala.util.control.NonFatal
 
 import scala.meta.Dialect
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.parsing.JavaTokens
 import scala.meta.internal.tokenizers.LegacyScanner
-import scala.meta.internal.tokenizers.LegacyToken._
+import scala.meta.internal.tokenizers.LegacyToken.*
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier

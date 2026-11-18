@@ -6,16 +6,16 @@ import scala.concurrent.Promise
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.FileOutOfScalaCliBspScope
 import scala.meta.internal.metals.InitializationOptions
-import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.JsonParser.*
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.mtags.CoursierComplete
 
 import munit.Location
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 import tests.FileLayout
 
 // https://github.com/scalameta/metals/issues/6839

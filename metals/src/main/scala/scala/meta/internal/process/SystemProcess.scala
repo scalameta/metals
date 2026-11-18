@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.sys.process.BasicIO
 import scala.util.Properties
 import scala.util.Using

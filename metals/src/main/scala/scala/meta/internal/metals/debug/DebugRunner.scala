@@ -11,7 +11,7 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Cancelable
-import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.JsonParser.*
 import scala.meta.internal.metals.StacktraceAnalyzer
 
 import ch.epfl.scala.bsp4j.RunResult

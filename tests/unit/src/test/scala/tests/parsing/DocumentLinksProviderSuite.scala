@@ -3,7 +3,7 @@ package tests.parsing
 import java.nio.file.Paths
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.parsing.DocumentLinksProvider
 import scala.meta.io.AbsolutePath
 
@@ -13,7 +13,7 @@ import org.eclipse.lsp4j.DocumentLink
 import tests.BaseSuite
 
 class DocumentLinksProviderSuite extends BaseSuite {
-  import DocumentLinksProviderSuite._
+  import DocumentLinksProviderSuite.*
   val workspace: AbsolutePath = AbsolutePath(Paths.get("."))
 
   test("url-find-all-links-and-report-correct-ranges") {

@@ -2,12 +2,12 @@ package tests
 
 import scala.collection.mutable
 
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.JsonParser
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 import munit.TestOptions
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 abstract class BaseAnalyzeStacktraceSuite(name: String)
     extends BaseLspSuite(name) {

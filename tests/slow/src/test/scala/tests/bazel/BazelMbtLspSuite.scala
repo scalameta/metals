@@ -1,18 +1,18 @@
 package tests.bazel
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.AutoImportBuildKind
 import scala.meta.internal.metals.config.JavaSymbolLoaderConfig
 import scala.meta.internal.metals.config.ReferenceProviderConfig
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.mbt.MbtBuildServer
-import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
 import tests.BaseLspSuite
@@ -1399,6 +1399,50 @@ class BazelMbtLspSuite
             |  },
             |  "uncheckedSources": []
             |}""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("bazel-import-mbt-excluded-targets") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        BazelBuildLayout(
+          s"""|$bazelWorkspaceLayout
+              |
+              |/.bazelproject
+              |targets:
+              |    //...:all
+              |    -//app/...:all
+              |
+              |""".stripMargin,
+          V.scala213,
+          bazelVersion,
+          mavenDeps,
+        ),
+        runAdditionalCommands = pinMaven,
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      mbtFile = workspace.resolve(".metals/mbt.json").readText
+      _ = assertNoDiff(escapeMbtFile(mbtFile), singleCoreMbtJson)
+      _ <- server.didOpen("core/Hello.scala")
+      _ <- server.assertHover(
+        "core/Hello.scala",
+        s"""|package core
+            |
+            |import cats.syntax.all._
+            |
+            |class Hello {
+            |  def hel@@lo: String = "Hello"
+            |  def catOption: Option[Int] = 1.some
+            |
+            |}
+            |""".stripMargin,
+        """|```scala
+           |def hello: String
+           |```
+           |""".stripMargin.hover,
       )
     } yield ()
   }

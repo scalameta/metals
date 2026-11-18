@@ -8,7 +8,7 @@ import scala.meta.internal.jpc.JavaPruneCompiler
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig

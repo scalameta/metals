@@ -5,11 +5,11 @@ import scala.meta.Stat
 import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.testProvider.FullyQualifiedName
 import scala.meta.internal.metals.testProvider.TestCaseEntry
-import scala.meta.internal.metals.testProvider.frameworks.ScalatestStyle._
-import scala.meta.internal.metals.testProvider.frameworks.ScalatestTestFinder._
+import scala.meta.internal.metals.testProvider.frameworks.ScalatestStyle.*
+import scala.meta.internal.metals.testProvider.frameworks.ScalatestTestFinder.*
 import scala.meta.internal.metals.testProvider.frameworks.TreeUtils
 import scala.meta.internal.mtags
 import scala.meta.internal.parsing.Trees

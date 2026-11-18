@@ -2,11 +2,11 @@ package scala.meta.internal.builds
 
 import java.security.MessageDigest
 
-import scala.meta.internal.bsp.BspConfigGenerationStatus._
+import scala.meta.internal.bsp.BspConfigGenerationStatus.*
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.Directories
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.scalacli.ScalaCli

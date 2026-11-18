@@ -1,13 +1,13 @@
 package scala.meta.internal.metals.mbt
 
 import java.net.URI
-import java.{util => ju}
+import java.util as ju
 import javax.tools.JavaFileObject.Kind
 import javax.tools.SimpleJavaFileObject
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.semanticdb as s
 import scala.meta.pc
 import scala.meta.pc.SemanticdbCompilationUnit
 
