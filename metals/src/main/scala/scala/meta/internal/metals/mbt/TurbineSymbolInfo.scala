@@ -1,7 +1,7 @@
 package scala.meta.internal.metals.mbt
 
 import scala.collection.mutable
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.pc.PcSymbolKind

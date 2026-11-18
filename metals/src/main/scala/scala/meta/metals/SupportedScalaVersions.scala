@@ -8,7 +8,7 @@ import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 
-import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.semver.SemVer
 

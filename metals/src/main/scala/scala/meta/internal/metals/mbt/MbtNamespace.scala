@@ -1,9 +1,9 @@
 package scala.meta.internal.metals.mbt
 
-import java.{util => ju}
+import java.util as ju
 import javax.annotation.Nullable
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 case class MbtNamespace(
     @Nullable sources: ju.List[String],

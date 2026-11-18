@@ -10,8 +10,8 @@ import scala.meta.internal.infra.NoopFeatureFlagProvider
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.InlayHintsOptions
 import scala.meta.internal.metals.JavaFormatterConfig
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.JsonParser.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.config.AutoImportBuildKind
 import scala.meta.internal.metals.config.BloopJvmProperties

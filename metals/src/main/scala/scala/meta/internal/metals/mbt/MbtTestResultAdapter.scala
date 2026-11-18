@@ -5,7 +5,7 @@ import java.io.Closeable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier

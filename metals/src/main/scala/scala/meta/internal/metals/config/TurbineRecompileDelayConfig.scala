@@ -1,6 +1,6 @@
 package scala.meta.internal.metals.config
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Testing

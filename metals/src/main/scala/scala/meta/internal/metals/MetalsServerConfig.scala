@@ -3,7 +3,7 @@ package scala.meta.internal.metals
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
-import scala.meta.internal.metals.config._
+import scala.meta.internal.metals.config.*
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 

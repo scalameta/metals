@@ -12,7 +12,7 @@ import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.util.Failure
 import scala.util.Properties
 import scala.util.Try
@@ -52,7 +52,7 @@ final class ProjectFileWatcher(
 )(implicit ec: ExecutionContext)
     extends FileWatcher
     with Cancelable {
-  import ProjectFileWatcher._
+  import ProjectFileWatcher.*
 
   @volatile
   private var stopWatcher: () => Unit = () => ()

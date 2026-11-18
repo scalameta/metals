@@ -5,7 +5,7 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.metals.JsonParser.XtensionSerializedAsOption
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 import com.google.gson.Gson

@@ -1,7 +1,7 @@
 package scala.meta.internal.metals.config.option
 
 import scala.meta.infra.FeatureFlagProvider
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.UserConfiguration
 
 case class StringListConfigurationOption(

@@ -4,7 +4,7 @@ import java.sql.Connection
 import java.sql.Timestamp
 import java.util.concurrent.TimeUnit
 
-import scala.meta.internal.metals.JdbcEnrichments._
+import scala.meta.internal.metals.JdbcEnrichments.*
 
 final class DismissedNotifications(conn: () => Connection, time: Time) {
 

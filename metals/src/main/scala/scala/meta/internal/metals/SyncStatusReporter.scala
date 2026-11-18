@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.meta.internal.bsp.BspStatusState
 import scala.meta.internal.bsp.Disconnected
 import scala.meta.internal.bsp.NoResponse
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsSyncStatusParams
 
@@ -20,7 +20,7 @@ class SyncStatusReporter(
     languageClient: MetalsLanguageClient,
     buildTargets: BuildTargets,
 ) {
-  import SyncStatusReporter._
+  import SyncStatusReporter.*
   private val status = new AtomicReference[Status](Idle)
   private val isBspActive = new AtomicReference[Boolean](false)
   private val currentFocus = new AtomicReference[Option[String]](None)

@@ -17,7 +17,7 @@ import scala.meta.internal.metals.InlayHintsOptions
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JavaFormatterConfig
 import scala.meta.internal.metals.JsonParser.XtensionSerializedJson
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.CompilerProgressConfig
 import scala.meta.internal.metals.config.DefinitionProviderConfig
 import scala.meta.internal.metals.config.EclipseFormatConfig
@@ -167,18 +167,18 @@ object UserConfiguration {
   val defaultShimGlobs: Map[String, List[String]] =
     Map.empty
 
-  def settings: List[UserConfigurationOption[_]] =
+  def settings: List[UserConfigurationOption[?]] =
     UserConfigurationOptions.settings
 
   def listOptions: String = {
     def oneLiners(
-        option: ConfigurationOption[_, _],
+        option: ConfigurationOption[?, ?],
         prefix: String,
     ): List[String] =
       option match {
-        case o: CustomConfigurationOption[_] if o.subFields.nonEmpty =>
+        case o: CustomConfigurationOption[?] if o.subFields.nonEmpty =>
           o.subFields.map(_.oneLiner)
-        case o: ObjectConfigurationOption[_] =>
+        case o: ObjectConfigurationOption[?] =>
           val nestedPrefix = s"$prefix${o.key}."
           o.subFields.flatMap(oneLiners(_, nestedPrefix))
         case other =>

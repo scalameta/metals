@@ -7,7 +7,7 @@ import scala.collection.mutable
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Classfile
 import scala.meta.internal.metals.EmptyReportContext
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.metals.WorkspaceSymbolQuery

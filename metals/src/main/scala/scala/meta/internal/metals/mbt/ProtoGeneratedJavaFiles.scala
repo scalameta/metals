@@ -6,7 +6,7 @@ import java.nio.file.Files
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Directories
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 

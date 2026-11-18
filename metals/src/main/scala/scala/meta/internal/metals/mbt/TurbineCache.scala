@@ -14,7 +14,7 @@ import scala.util.Using
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Directories
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.config.UserConfiguration

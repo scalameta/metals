@@ -10,7 +10,7 @@ import scala.meta.internal.metals.ClosableOutputStream
 import scala.meta.internal.metals.DismissedNotifications
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsBuildClient
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.QuietInputStream
 import scala.meta.internal.metals.TaskProgress

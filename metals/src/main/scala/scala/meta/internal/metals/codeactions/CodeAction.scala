@@ -6,11 +6,11 @@ import scala.concurrent.Future
 import scala.reflect.ClassTag
 
 import scala.meta.internal.metals.JsonParser
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.pc.CancelToken
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 trait CodeAction {
 

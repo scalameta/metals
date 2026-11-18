@@ -22,7 +22,7 @@ class MemoryMonitor(
 
   private val memoryBean = ManagementFactory.getMemoryMXBean()
   private val warningShown = new AtomicBoolean(false)
-  private var scheduledTask: Option[ScheduledFuture[_]] = None
+  private var scheduledTask: Option[ScheduledFuture[?]] = None
 
   // Threshold: warn when heap usage exceeds 90% of max heap
   private val warningThreshold = 0.90

@@ -4,7 +4,7 @@ import scala.meta.internal.metals.codeactions.RemoveInvalidImport
 import scala.meta.internal.metals.codeactions.RemoveInvalidImportQuickFix
 import scala.meta.internal.metals.codeactions.SourceRemoveInvalidImports
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class RemoveInvalidImportLspSuite
     extends BaseCodeActionLspSuite("removeInvalidSymbol") {

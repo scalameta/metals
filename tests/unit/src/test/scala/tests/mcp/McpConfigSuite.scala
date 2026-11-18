@@ -3,7 +3,7 @@ package tests.mcp
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.mcp.Claude
 import scala.meta.internal.metals.mcp.Client
 import scala.meta.internal.metals.mcp.Codex
