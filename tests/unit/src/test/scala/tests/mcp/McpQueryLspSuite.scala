@@ -3,7 +3,7 @@ package tests.mcp
 import java.nio.file.Path
 
 import scala.meta.internal.metals.WorkspaceSymbolInformation
-import scala.meta.internal.metals.mcp.McpPrinter._
+import scala.meta.internal.metals.mcp.McpPrinter.*
 import scala.meta.internal.metals.mcp.SymbolType
 import scala.meta.internal.semanticdb.SymbolInformation.Kind
 

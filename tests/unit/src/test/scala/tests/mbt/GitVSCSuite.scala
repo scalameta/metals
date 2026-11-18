@@ -12,7 +12,7 @@ import tests.TemporaryDirectoryFixture
 
 class GitVSCSuite extends munit.FunSuite {
   val workspace = new TemporaryDirectoryFixture()
-  override def munitFixtures: Seq[AnyFixture[_]] = List(workspace)
+  override def munitFixtures: Seq[AnyFixture[?]] = List(workspace)
 
   def lsFilesStage(): List[GitBlob] = {
     GitVCS.lsFilesStage(workspace(), _ => true).toList.sortBy(_.path)

@@ -13,7 +13,7 @@ import scala.meta.internal.bsp.BspServers.readInBspConfig
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsBuildClient
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsProjectDirectories
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ScalaVersionSelector

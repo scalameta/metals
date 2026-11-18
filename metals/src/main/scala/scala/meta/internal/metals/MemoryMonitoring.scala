@@ -5,7 +5,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 import scala.meta.infra.Event
 import scala.meta.infra.MonitoringClient
@@ -26,7 +26,7 @@ class MemoryMonitoring(
   private def totalGcTime(): Long =
     gcBeans.map(_.getCollectionTime).filter(_ >= 0).sum
 
-  private val scheduled: ScheduledFuture[_ <: Object] =
+  private val scheduled: ScheduledFuture[? <: Object] =
     sh.scheduleAtFixedRate(
       () => publishMetrics(),
       IntervalSeconds,

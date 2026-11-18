@@ -7,14 +7,14 @@ import java.nio.file.StandardOpenOption
 
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.TimeFormatter
 import scala.meta.internal.metals.utils.LimitedFilesManager
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
-import scribe._
+import scribe.*
 import scribe.file.FileWriter
 import scribe.file.PathBuilder
 import scribe.format.Formatter

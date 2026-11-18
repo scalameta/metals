@@ -2,7 +2,7 @@ package tests.feature
 
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 import munit.Location
 import tests.BaseLspSuite

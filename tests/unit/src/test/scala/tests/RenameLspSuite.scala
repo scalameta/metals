@@ -1,7 +1,7 @@
 package tests
 
 import scala.meta.internal.metals.InitializationOptions
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 class RenameLspSuite extends BaseRenameLspSuite("rename") {
 

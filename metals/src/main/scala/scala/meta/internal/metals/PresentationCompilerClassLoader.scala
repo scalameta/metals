@@ -11,7 +11,7 @@ package scala.meta.internal.metals
 class PresentationCompilerClassLoader(parent: ClassLoader)
     extends ClassLoader(ClassLoader.getSystemClassLoader().getParent()) {
 
-  override def findClass(name: String): Class[_] = {
+  override def findClass(name: String): Class[?] = {
     val isShared =
       name.startsWith("org.slf4j") ||
         name.startsWith("com.google.gson") ||

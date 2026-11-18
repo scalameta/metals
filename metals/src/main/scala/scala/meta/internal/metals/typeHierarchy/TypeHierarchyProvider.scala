@@ -6,8 +6,8 @@ import scala.concurrent.Future
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.ImplementationsResult
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.JsonParser.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.mbt.MbtReferenceProvider
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation

@@ -5,7 +5,7 @@ import java.util
 
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.DefinitionProvider
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 import com.google.gson.JsonElement

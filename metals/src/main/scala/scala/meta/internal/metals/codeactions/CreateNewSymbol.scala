@@ -4,7 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.Compilers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -13,7 +13,7 @@ import scala.meta.internal.metals.logging
 import scala.meta.pc.CancelToken
 import scala.meta.pc.CodeActionId
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class CreateNewSymbol(
     compilers: Compilers,

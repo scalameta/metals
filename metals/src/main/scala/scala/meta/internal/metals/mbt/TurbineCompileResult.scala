@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 import scala.util.control.NonFatal
 
-import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.jdk.CollectionConverters.*
 
 import com.google.common.collect.ImmutableMap
 import com.google.turbine.binder.ClassPath

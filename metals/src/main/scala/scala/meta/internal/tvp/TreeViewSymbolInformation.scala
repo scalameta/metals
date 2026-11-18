@@ -1,9 +1,9 @@
 package scala.meta.internal.tvp
 
-import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
+import scala.meta.internal.semanticdb.SymbolInformation.Kind as k
 
 case class TreeViewSymbolInformation(
     symbol: String,

@@ -4,7 +4,7 @@ import scala.meta.dialects
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath

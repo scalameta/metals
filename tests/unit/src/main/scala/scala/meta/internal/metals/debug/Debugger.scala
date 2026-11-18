@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 import org.eclipse.lsp4j.debug.Capabilities
 import org.eclipse.lsp4j.debug.CompletionsArguments

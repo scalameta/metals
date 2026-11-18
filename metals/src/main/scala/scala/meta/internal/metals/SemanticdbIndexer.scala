@@ -7,7 +7,7 @@ import java.nio.file.Path
 import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PlatformFileIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.mtags.SemanticdbPath
 import scala.meta.internal.semanticdb.TextDocument

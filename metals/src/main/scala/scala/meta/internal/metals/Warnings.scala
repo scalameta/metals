@@ -1,10 +1,10 @@
 package scala.meta.internal.metals
 
 import scala.meta.internal.builds.BuildTools
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ScalaVersions._
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.ScalaVersions.*
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
-import scala.meta.internal.metals.logging.MetalsLogger.{silentInTests => logger}
+import scala.meta.internal.metals.logging.MetalsLogger.silentInTests as logger
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.io.AbsolutePath
 

@@ -1,11 +1,11 @@
 package tests.feature
 
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.EmptyReportContext
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.SemanticTokensProvider
-import scala.meta.internal.metals.{BuildInfo => V}
 
 import tests.DirectoryExpectSuite
 import tests.ExpectTestCase

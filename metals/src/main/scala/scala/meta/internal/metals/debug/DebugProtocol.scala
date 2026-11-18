@@ -5,11 +5,13 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.debug.DebugProxy.DebugMode
 
 import ch.epfl.scala.debugadapter.TestResultEvent
 import com.google.gson.JsonElement
+import org.eclipse.lsp4j as l
+import org.eclipse.lsp4j.debug as dap
 import org.eclipse.lsp4j.debug.CompletionsArguments
 import org.eclipse.lsp4j.debug.DisconnectArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
@@ -26,11 +28,9 @@ import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
-import org.eclipse.lsp4j.{debug => dap}
-import org.eclipse.{lsp4j => l}
 
 object DebugProtocol {
-  import DapJsonParser._
+  import DapJsonParser.*
   val FirstMessageId = 1
 
   val serverName = "dap-server"

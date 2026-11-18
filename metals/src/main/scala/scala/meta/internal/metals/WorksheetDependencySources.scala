@@ -2,8 +2,8 @@ package scala.meta.internal.metals
 
 import java.sql.Connection
 
-import scala.meta.internal.metals.JdbcEnrichments._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.JdbcEnrichments.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 final class WorksheetDependencySources(conn: () => Connection) {

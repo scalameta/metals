@@ -8,7 +8,7 @@ import scala.meta.internal.metals.codelenses.CodeLens
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.io.AbsolutePath
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 final class CodeLensProvider(
     codeLensProviders: List[CodeLens],

@@ -1,16 +1,16 @@
 package scala.meta.internal.metals
 
-import java.{util => ju}
+import java.util as ju
 
 import scala.build.bsp.WrappedSourcesParams
 import scala.build.bsp.WrappedSourcesResult
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.buildserver.BuildServerConnection
 
-import ch.epfl.scala.bsp4j._
+import ch.epfl.scala.bsp4j.*
 
 /**
  * Metadata that we import from the build tool via BSP.

@@ -8,7 +8,7 @@ import scala.util.Success
 
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.InitializationOptions
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 class UnsupportedDebuggingLspSuite
     extends BaseLspSuite("unsupported-debugging") {

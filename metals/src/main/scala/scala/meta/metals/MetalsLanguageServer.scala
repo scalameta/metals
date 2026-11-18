@@ -24,7 +24,7 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.FallbackMetalsLspService
 import scala.meta.internal.metals.Folder
 import scala.meta.internal.metals.MemoryMonitor
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MetalsServerInputs
 import scala.meta.internal.metals.MutableCancelable
@@ -40,7 +40,7 @@ import scala.meta.metals.lsp.DelegatingScalaService
 import scala.meta.metals.lsp.LanguageServer
 import scala.meta.metals.lsp.ScalaLspService
 
-import org.eclipse.lsp4j._
+import org.eclipse.lsp4j.*
 
 /**
  * Scala Language Server implementation.
@@ -74,7 +74,7 @@ class MetalsLanguageServer(
     s"MetalsLanguageServer constructor called at ${startInstant}"
   )
 
-  import serverInputs._
+  import serverInputs.*
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)

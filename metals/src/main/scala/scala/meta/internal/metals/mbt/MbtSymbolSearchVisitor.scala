@@ -1,6 +1,6 @@
 package scala.meta.internal.metals.mbt
 
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.semanticdb as s
 
 @FunctionalInterface
 abstract class MbtSymbolSearchVisitor {
