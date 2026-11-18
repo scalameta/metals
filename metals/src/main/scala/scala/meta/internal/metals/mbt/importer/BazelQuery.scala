@@ -181,12 +181,13 @@ object BazelQuery {
     }
     if (parsedRules.isEmpty) Map.empty
     else
-      attributeNames.map { attrName =>
-        val byTarget = parsedRules.map { case (target, attrsByName) =>
-          target -> attrsByName.getOrElse(attrName, Nil)
-        }.toMap
-        attrName -> byTarget
-      }.toMap
+      (for {
+        attrName <- attributeNames
+        byTarget = (for {
+          (target, attrsByName) <- parsedRules
+          values <- attrsByName.get(attrName)
+        } yield target -> values).toMap
+      } yield attrName -> byTarget).toMap
   }
 
   private def extractStringListAttribute(attr: JsonObject): List[String] =

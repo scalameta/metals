@@ -118,6 +118,53 @@ class BazelSelectOptsSuite extends FunSuite {
     )
   }
 
+  test("parse-omitted-attribute-preserves-xml-options") {
+    val jsonproto = List(
+      """{"type":"RULE","rule":{"name":"//pkg:omitted_scalac","ruleClass":"scala_library","attribute":[{"name":"javacopts","type":"STRING_LIST","stringListValue":["-g"],"explicitlySpecified":true}]}}""",
+      """{"type":"RULE","rule":{"name":"//pkg:empty_scalac","ruleClass":"scala_library","attribute":[{"name":"scalacopts","type":"STRING_LIST","explicitlySpecified":true}]}}""",
+    ).mkString("\n")
+
+    val parsed = BazelQuery.parseUnflattenedStringLists(
+      jsonproto,
+      Set("scalacopts", "javacopts"),
+    )
+
+    val xmlDump = new BazelTargetsXmlDump(
+      """<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+        |<query version="2">
+        |  <rule class="scala_library" name="//pkg:omitted_scalac">
+        |    <list name="scalacopts">
+        |      <string value="-Xsource:3"/>
+        |    </list>
+        |    <list name="javacopts">
+        |      <string value="-warn:-unused"/>
+        |    </list>
+        |  </rule>
+        |  <rule class="scala_library" name="//pkg:empty_scalac">
+        |    <list name="scalacopts">
+        |      <string value="-Xfatal-warnings"/>
+        |    </list>
+        |  </rule>
+        |</query>""".stripMargin
+    )
+
+    val mergedScalac =
+      xmlDump.getStrings("scalacopts") ++ parsed.getOrElse(
+        "scalacopts",
+        Map.empty,
+      )
+    val mergedJavac =
+      xmlDump.getStrings("javacopts") ++ parsed.getOrElse(
+        "javacopts",
+        Map.empty,
+      )
+
+    assert(!parsed("scalacopts").contains("//pkg:omitted_scalac"))
+    assertEquals(mergedScalac("//pkg:omitted_scalac"), List("-Xsource:3"))
+    assertEquals(mergedJavac("//pkg:omitted_scalac"), List("-g"))
+    assertEquals(mergedScalac("//pkg:empty_scalac"), Nil)
+  }
+
   test("parse-empty-output-preserves-xml-fallback") {
     assertEquals(
       BazelQuery.parseUnflattenedStringLists(
