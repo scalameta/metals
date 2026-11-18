@@ -113,7 +113,7 @@ class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
             |package a;
             |
             |public class Example {
-            |  public static Path path = null;
+            |  public static LocalDate date = null;
             |  public static Instant now = null;
             |}
             |""".stripMargin
@@ -125,7 +125,7 @@ class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
         s"""|package a;
             |
             |public class <<Example>> {
-            |  public static Path path = null;
+            |  public static LocalDate date = null;
             |  public static Instant now = null;
             |}
             |""".stripMargin,
@@ -137,12 +137,11 @@ class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
       _ = assertNoDiff(
         server.bufferContents(path),
         """|package a;
-           |
-           |import java.nio.file.Path;
            |import java.time.Instant;
+           |import java.time.LocalDate;
            |
            |public class Example {
-           |  public static Path path = null;
+           |  public static LocalDate date = null;
            |  public static Instant now = null;
            |}
            |""".stripMargin,
