@@ -340,7 +340,7 @@ final class FoldingRangeExtractor(
       }
     }
 
-    private def findTermFoldStartAndAdjustment[T: ClassTag](
+    private def findTermFoldStartAndAdjustment[T <: Token: ClassTag](
         trailingTokens: Iterator[Token],
         startFoldIfEOL: Boolean,
     ): Option[(Int, Boolean)] = {
@@ -368,7 +368,7 @@ final class FoldingRangeExtractor(
       }
     }
 
-    private def getFoldingRangeForBlockAfterKeyword[T: ClassTag](
+    private def getFoldingRangeForBlockAfterKeyword[T <: Token: ClassTag](
         block: Term.Block
     ): Option[Position] = {
       val firstToken = block.leadingTokens
