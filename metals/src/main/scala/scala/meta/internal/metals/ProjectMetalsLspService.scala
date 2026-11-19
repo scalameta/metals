@@ -186,7 +186,7 @@ class ProjectMetalsLspService(
     folder,
     buildTargets,
     statusBar,
-    clientConfig.icons,
+    clientConfig.icons(),
     buildTools,
     compilations.isCurrentlyCompiling,
   )
@@ -245,7 +245,7 @@ class ProjectMetalsLspService(
       this,
       syncStatusReporter,
       () => mbtBuild,
-      mbtDebugStarter = () => mbtDebugStarter,
+      mbtDebugStarter = () => mbtDebugStarter(),
     )
     provider.buildServerPromise.future.onComplete(_ => moduleStatus.refresh())
     provider
@@ -341,7 +341,7 @@ class ProjectMetalsLspService(
               queryEngine,
               folder,
               compilations,
-              () => focusedDocument,
+              () => focusedDocument(),
               diagnostics,
               buildTargets,
               mcpTestRunner,
@@ -363,7 +363,7 @@ class ProjectMetalsLspService(
               queryEngine,
               folder,
               compilations,
-              () => focusedDocument,
+              () => focusedDocument(),
               diagnostics,
               buildTargets,
               mcpTestRunner,

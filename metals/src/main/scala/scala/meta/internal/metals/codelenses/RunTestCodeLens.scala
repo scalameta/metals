@@ -276,7 +276,8 @@ final class RunTestCodeLens(
       if occurrence.role.isDefinition || occurrence.symbol == "scala/main#"
       symbol = occurrence.symbol
       commands = {
-        val main = classes.mainClasses
+        val main = classes
+          .mainClasses()
           .get(symbol)
           .filter(_ => !path.isJava)
           .map(mainCommand(target, _, isJVM))
@@ -289,7 +290,8 @@ final class RunTestCodeLens(
         val fromAnnot = DebugDiscovery
           .mainFromAnnotation(occurrence, textDocument)
           .flatMap { symbol =>
-            classes.mainClasses
+            classes
+              .mainClasses()
               .get(symbol)
               .map(mainCommand(target, _, isJVM))
           }
@@ -323,7 +325,8 @@ final class RunTestCodeLens(
       isJVM: Boolean,
   ): List[l.Command] =
     if (userConfig().testUserInterface == TestUserInterfaceKind.CodeLenses)
-      classes.testClasses
+      classes
+        .testClasses()
         .get(symbol)
         .toList
         .flatMap(symbolInfo =>

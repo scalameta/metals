@@ -43,7 +43,7 @@ class BuildTargetClassesFinder(
           classes,
           buildTargetClasses
             .classesOf(_)
-            .mainClasses
+            .mainClasses()
             .values,
           { (clazz: b.ScalaMainClass) => clazz.getClassName },
         ).recoverWith { case ex =>
@@ -90,7 +90,7 @@ class BuildTargetClassesFinder(
           id =>
             buildTargetClasses
               .classesOf(id)
-              .testClasses
+              .testClasses()
               .values
               .map(_.fullyQualifiedName),
           clazz => clazz,

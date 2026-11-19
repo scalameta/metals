@@ -105,7 +105,7 @@ class ScalaCliServers(
   def cancel(): Unit = {
     val servers = serversRef.getAndSet(Queue.empty)
     servers.foreach(_.cancel())
-    servers.foreach(_.customWorkspace.foreach(_.deleteRecursively))
+    servers.foreach(_.customWorkspace.foreach(_.deleteRecursively()))
   }
 
   def loaded(path: AbsolutePath): Boolean =

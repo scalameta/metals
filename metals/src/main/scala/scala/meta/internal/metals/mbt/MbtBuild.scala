@@ -189,7 +189,7 @@ object MbtBuild {
     val text = Files.readString(file)
     val build = gson.fromJson(text, classOf[MbtBuild])
     val (validModules, invalidModules) =
-      build.getDependencyModules.asScala.partition(_.isValid)
+      build.getDependencyModules().asScala.partition(_.isValid)
     invalidModules.foreach { module =>
       scribe.warn(
         s"mbt-build: ignoring invalid dependency module ID '${module.id}'. Expected format: 'organization:name:version'."
@@ -215,7 +215,7 @@ object MbtBuild {
    */
   def merge(a: MbtBuild, b: MbtBuild): MbtBuild = {
     val mergedModules =
-      (a.getDependencyModules.asScala ++ b.getDependencyModules.asScala)
+      (a.getDependencyModules().asScala ++ b.getDependencyModules().asScala)
         .distinctBy(_.id)
         .asJava
 

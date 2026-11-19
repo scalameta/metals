@@ -186,7 +186,7 @@ class WorkspaceLspService(
     httpServer match {
       // execute client command provider is used to provide the normal doctor
       case HttpServerOff
-          if !clientConfig.isExecuteClientCommandProvider && !clientConfig
+          if !clientConfig.isExecuteClientCommandProvider() && !clientConfig
             .isHttpEnabled() =>
         languageClient
           .showMessageRequest(
