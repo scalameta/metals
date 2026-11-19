@@ -128,7 +128,7 @@ object MavenMbtImporter {
         |      <id>$snapshotsProfileId</id>
         |      <pluginRepositories>
         |        <pluginRepository>
-        |          <id>central-snapshots</id>
+        |          <id>metals-mbt-central-snapshots</id>
         |          <url>$centralSnapshotsUrl</url>
         |          <releases><enabled>false</enabled></releases>
         |          <snapshots><enabled>true</enabled></snapshots>
