@@ -16,6 +16,10 @@ import scala.meta.internal.process.ExitCodes
 import scala.meta.internal.process.ProcessOutput
 import scala.meta.io.AbsolutePath
 
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+
 object BazelQuery {
 
   /**
@@ -38,6 +42,7 @@ object BazelQuery {
   object OutputMode {
     case object Label extends OutputMode("label")
     case object Xml extends OutputMode("xml")
+    case object StreamedJsonproto extends OutputMode("streamed_jsonproto")
 
     // valid only for "bazel cquery"
     case object Starlark extends OutputMode("starlark")
@@ -129,6 +134,104 @@ object BazelQuery {
       "scala_library", "java_library", "scala_binary", "java_binary",
       "scala_test", "java_test", "scala_import", "java_import",
     )
+
+  private val defaultConditionLabel: String = "//conditions:default"
+
+  def unflattenedRuleAttrsQuery(
+      targets: List[String],
+      attributeNames: List[String],
+  ): Option[BazelQuery] = {
+    val escaped = targets.flatMap(quoteTarget)
+    Option.when(escaped.nonEmpty && attributeNames.nonEmpty)(
+      BazelQuery(
+        s"set(${escaped.mkString(" ")})",
+        outputMode = StreamedJsonproto,
+        extraArgs = List(
+          "--proto:flatten_selects=false",
+          s"--proto:output_rule_attrs=${attributeNames.mkString(",")}",
+          "--noproto:rule_inputs_and_outputs",
+          "--noproto:locations",
+        ),
+      )
+    )
+  }
+
+  def parseUnflattenedStringLists(
+      jsonproto: String,
+      attributeNames: Set[String],
+  ): Map[String, Map[String, List[String]]] = {
+    val parsedRules = for {
+      rawLine <- jsonproto.split('\n')
+      line = rawLine.trim
+      if line.startsWith("{")
+      root <- Try(JsonParser.parseString(line)).toOption
+      if root.isJsonObject
+      rule <- jsonObject(root.getAsJsonObject, "rule")
+      target <- jsonString(rule, "name")
+      if target.nonEmpty
+    } yield {
+      val attrsByName = (for {
+        attrElem <- jsonArray(rule, "attribute")
+        if attrElem.isJsonObject
+        attr = attrElem.getAsJsonObject
+        name <- jsonString(attr, "name")
+        if attributeNames.contains(name)
+      } yield name -> extractStringListAttribute(attr)).toMap
+      target -> attrsByName
+    }
+    if (parsedRules.isEmpty) Map.empty
+    else
+      (for {
+        attrName <- attributeNames
+        byTarget = (for {
+          (target, attrsByName) <- parsedRules
+          values <- attrsByName.get(attrName)
+        } yield target -> values).toMap
+      } yield attrName -> byTarget).toMap
+  }
+
+  private def extractStringListAttribute(attr: JsonObject): List[String] =
+    jsonString(attr, "type") match {
+      case Some("STRING_LIST") =>
+        stringListValues(attr)
+      case Some("SELECTOR_LIST") =>
+        val values = for {
+          selectorList <- jsonObject(attr, "selectorList").toSeq
+          elem <- jsonArray(selectorList, "elements")
+          if elem.isJsonObject
+          entry <- jsonArray(elem.getAsJsonObject, "entries")
+          if entry.isJsonObject
+          entryObj = entry.getAsJsonObject
+          if jsonString(entryObj, "label").exists(isDefaultCondition)
+          value <- stringListValues(entryObj)
+        } yield value
+        values.toList
+      case _ =>
+        Nil
+    }
+
+  private def isDefaultCondition(label: String): Boolean =
+    label.stripPrefix("@@").stripPrefix("@") == defaultConditionLabel
+
+  private def stringListValues(obj: JsonObject): List[String] = {
+    val values = for {
+      elem <- jsonArray(obj, "stringListValue")
+      if elem.isJsonPrimitive
+    } yield elem.getAsString
+    values.toList
+  }
+
+  private def jsonObject(obj: JsonObject, key: String): Option[JsonObject] =
+    Option(obj.get(key)).filter(_.isJsonObject).map(_.getAsJsonObject)
+
+  private def jsonArray(obj: JsonObject, key: String): Iterable[JsonElement] =
+    Option(obj.get(key))
+      .filter(_.isJsonArray)
+      .map(_.getAsJsonArray.asScala)
+      .getOrElse(Nil)
+
+  private def jsonString(obj: JsonObject, key: String): Option[String] =
+    Option(obj.get(key)).filter(_.isJsonPrimitive).map(_.getAsString)
 
 }
 
