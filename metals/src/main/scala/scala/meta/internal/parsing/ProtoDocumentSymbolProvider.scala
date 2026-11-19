@@ -115,9 +115,9 @@ final class ProtoDocumentSymbolProvider(
       sym
     }
 
-    def buildEnum(enum: Proto.EnumDecl): DocumentSymbol = {
-      val sym = newSymbol(enum.name().value(), SymbolKind.Enum, enum)
-      enum.values().asScala.foreach { v =>
+    def buildEnum(enumDecl: Proto.EnumDecl): DocumentSymbol = {
+      val sym = newSymbol(enumDecl.name().value(), SymbolKind.Enum, enumDecl)
+      enumDecl.values().asScala.foreach { v =>
         sym.getChildren.add(
           newSymbol(
             v.name().value(),
