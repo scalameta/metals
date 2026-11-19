@@ -61,6 +61,8 @@ final class Diagnostics(
     TrieMap.empty[AbsolutePath, List[Diagnostic]]
   private val snapshots =
     TrieMap.empty[AbsolutePath, Input.VirtualFile]
+  private val lastResetOrigin =
+    TrieMap.empty[AbsolutePath, (String, BuildTargetIdentifier)]
   private val lastPublished =
     new AtomicReference[AbsolutePath]()
   private val diagnosticsBuffer =
@@ -86,15 +88,23 @@ final class Diagnostics(
   def reset(): Unit = {
     val keys = diagnostics.keys ++ scalafixDiagnostics.keys
     diagnostics.clear()
+    lastResetOrigin.clear()
     scalafixDiagnostics.clear()
     keys.foreach { key => publishDiagnostics(key) }
   }
 
   def reset(paths: Seq[AbsolutePath]): Unit =
     for (path <- paths if diagnostics.contains(path)) {
-      diagnostics.remove(path)
+      removeDiagnostics(path)
       publishDiagnostics(path)
     }
+
+  private def removeDiagnostics(
+      path: AbsolutePath
+  ): Option[ju.Queue[DiagnosticWithOrigin]] = {
+    lastResetOrigin.remove(path)
+    diagnostics.remove(path)
+  }
 
   def onStartCompileBuildTarget(target: BuildTargetIdentifier): Unit = {
     if (statistics.isDiagnostics) {
@@ -108,6 +118,13 @@ final class Diagnostics(
       originId: String,
   ): Unit = {
     val target = report.getTarget()
+
+    // Mill sets the origin id only on the compile report.
+    for {
+      finishedId <- Option(originId).orElse(Option(report.getOriginId()))
+      (path, origin) <- lastResetOrigin
+      if origin == (finishedId, target)
+    } lastResetOrigin.remove(path, origin)
 
     // if we use best effort compilation downstream targets
     // should get recompiled even if compilation fails
@@ -137,7 +154,7 @@ final class Diagnostics(
           if (updatedQueue.isEmpty) {
             reset(Seq(path))
           }
-          diagnostics.remove(path)
+          removeDiagnostics(path)
 
         }
     }
@@ -160,7 +177,7 @@ final class Diagnostics(
 
   def onClose(path: AbsolutePath): Unit = {
     val diags = if (path.isWorksheet) {
-      diagnostics.remove(path).toList.flatMap(_.asScala) ++
+      removeDiagnostics(path).toList.flatMap(_.asScala) ++
         syntaxError.remove(path)
     } else syntaxError.remove(path).toList
 
@@ -171,7 +188,7 @@ final class Diagnostics(
   }
 
   def didDelete(path: AbsolutePath): Unit = {
-    diagnostics.remove(path)
+    removeDiagnostics(path)
     syntaxError.remove(path)
     scalafixDiagnostics.remove(path)
 
@@ -210,8 +227,9 @@ final class Diagnostics(
           )
           .toSeq
         if (path.isFile)
-        _ = onPublishDiagnostics(
+        _ = onBuildTargetDiagnostics(
           path,
+          params.getBuildTarget(),
           diagnostics,
           params.getReset(),
           params.getOriginId(),
@@ -223,6 +241,25 @@ final class Diagnostics(
         s"Invalid text document uri received from build server: ${params.getTextDocument.getUri}"
       )
     }
+  }
+
+  private def onBuildTargetDiagnostics(
+      path: AbsolutePath,
+      target: BuildTargetIdentifier,
+      diagnostics: Seq[Diagnostic],
+      isReset: Boolean,
+      originId: String,
+  ): Unit = {
+    // Bloop clears stale problems without an origin id.
+    if (isReset) Option(originId) match {
+      case Some(id) => lastResetOrigin(path) = (id, target)
+      case None => lastResetOrigin.remove(path)
+    }
+    val isFromOtherRequest = !isReset && Option(originId).exists(id =>
+      lastResetOrigin.get(path).exists { case (resetId, _) => resetId != id }
+    )
+    if (!isFromOtherRequest)
+      onPublishDiagnostics(path, diagnostics, isReset, originId)
   }
 
   def onPublishDiagnostics(
@@ -277,7 +314,7 @@ final class Diagnostics(
        * if a file is duplicated across targets */
       if targets.exists(inverseDeps.apply) && !targetSet.contains(buildTarget)
     } yield {
-      diagnostics.remove(path)
+      removeDiagnostics(path)
       publishDiagnostics(path)
       targets
     }
