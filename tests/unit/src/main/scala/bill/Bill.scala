@@ -149,7 +149,7 @@ object Bill {
     val reporter = new StoreReporter
     val out: AbsolutePath = AbsolutePath(workspace.resolve("out.jar"))
     Files.createDirectories(out.toNIO.getParent())
-    lazy val g: nsc.Global = {
+    final lazy val g: nsc.Global = {
       val settings = new nsc.Settings()
       settings.classpath.value =
         myClasspath.map(_.toString).mkString(File.pathSeparator)
@@ -293,9 +293,9 @@ object Bill {
             val end =
               toBspPos(info.pos, if (p.isRange) p.end else p.point)
             val severity = info.severity match {
-              case reporter.ERROR => DiagnosticSeverity.ERROR
-              case reporter.WARNING => DiagnosticSeverity.WARNING
-              case reporter.INFO => DiagnosticSeverity.INFORMATION
+              case s if s == reporter.ERROR => DiagnosticSeverity.ERROR
+              case s if s == reporter.WARNING => DiagnosticSeverity.WARNING
+              case s if s == reporter.INFO => DiagnosticSeverity.INFORMATION
               case _ => DiagnosticSeverity.HINT
             }
             val diagnostic = new Diagnostic(new b.Range(start, end), info.msg)
