@@ -99,9 +99,7 @@ abstract class BazelMbtImporter(
       )
       targetSet = targets.toSet
       deps = queryDeps(targetSet, targets, targetsXmlDump)
-      reachableLabelsByTarget = targetsXmlDump.reachableLabels(targets)
-      externalDeps =
-        targetsXmlDump.externalDepsByTarget(reachableLabelsByTarget)
+      externalDeps = targetsXmlDump.externalDepsByTarget(targets)
       // Materialize the external repositories before the Maven lock file is
       // matched against `external/`; on a cold output base the jars of a
       // pinned rules_jvm_external hub do not exist until Bazel fetches them.
@@ -151,11 +149,16 @@ abstract class BazelMbtImporter(
         targetsXmlDump.sourcesJarByImportTarget,
         bazelBin,
       )
-      importDepModules = buildImportModuleIdsByTarget(
-        targets,
-        importTargetJarLabels,
-        reachableLabelsByTarget,
-      )
+      importDepModules =
+        if (importTargetJarLabels.isEmpty) Map.empty[String, List[String]]
+        else
+          buildImportModuleIdsByTarget(
+            targets,
+            importTargetJarLabels,
+            targetsXmlDump.reachableLabelsWhere(targets)(
+              importTargetJarLabels.contains
+            ),
+          )
       allDependencyModules = dependencyModules ++ importJarModules
       allExternalDepModules = mergeDepsModuleMaps(
         externalDepModules,
