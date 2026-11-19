@@ -273,7 +273,7 @@ object MetalsEnrichments
 
   implicit class XtensionScalaFuture[A](future: Future[A]) {
     def asCancelable: CancelableFuture[A] =
-      CancelableFuture(future)
+      CancelableFuture(future, Cancelable.empty)
 
     def asJava: CompletableFuture[A] =
       FutureConverters.toJava(future).toCompletableFuture
