@@ -137,10 +137,11 @@ object McpPrinter {
   }
 
   private def showDiagnostic(diagnostic: Diagnostic): String = {
-    val startLine = diagnostic.getRange().getStart().getLine()
-    val startColumn = diagnostic.getRange().getStart().getCharacter()
-    val endLine = diagnostic.getRange().getEnd().getLine()
-    val endColumn = diagnostic.getRange().getEnd().getCharacter()
+    // LSP positions are 0-based; print 1-based like the compiler.
+    val startLine = diagnostic.getRange().getStart().getLine() + 1
+    val startColumn = diagnostic.getRange().getStart().getCharacter() + 1
+    val endLine = diagnostic.getRange().getEnd().getLine() + 1
+    val endColumn = diagnostic.getRange().getEnd().getCharacter() + 1
     val severityText = diagnostic.getSeverity() match {
       case DiagnosticSeverity.Error => "Error"
       case DiagnosticSeverity.Warning => "Warning"
