@@ -82,6 +82,9 @@ object V {
 
   val sbt2Version = "2.1.0"
 
+  // Keep this independent of newer releases, which require sbt 2.1.
+  val sbtMetalsForSbt20 = "1.6.9"
+
   // sbt 1 version recommended to users and used to generate test builds.
   // The Metals build itself is sbt 2; see project/build.properties.
   val sbtVersion = "1.13.0"
