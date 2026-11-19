@@ -361,24 +361,33 @@ object SbtBuildTool {
   def writeSbtMetalsPlugins(projectRoot: AbsolutePath): Boolean = {
     val mainMeta = projectRoot.resolve("project")
     val metaMeta = projectRoot.resolve("project").resolve("project")
+    val sbtVersion = loadVersion(projectRoot)
+    val metalsVersion =
+      if (
+        sbtVersion.exists(version =>
+          ScalaVersions.isSbt2Version(version) &&
+            !isCompatibleVersion("2.1.0", version)
+        )
+      ) BuildInfo.sbtMetalsForSbt20
+      else BuildInfo.metalsVersion
+    val metalsPlugin = metalsPluginDetails(metalsVersion)
 
     val writtenPlugin =
-      writePlugins(mainMeta, metalsPluginDetails, debugAdapterPluginDetails)
+      writePlugins(mainMeta, metalsPlugin, debugAdapterPluginDetails)
     val isSbt2 =
-      SbtBuildTool
-        .loadVersion(projectRoot)
+      sbtVersion
         .map(ScalaVersions.isSbt2Version)
         .getOrElse(true)
     if (isSbt2) {
       val writtenMeta = writePlugins(
         metaMeta,
-        metalsPluginDetails,
+        metalsPlugin,
         // sbt 2.x doesn't need sbt-jdi-tools plugin because it only runs on Java 17+ where the JDI tools are included.
       )
       writtenMeta || writtenPlugin
     } else {
       val writtenMeta =
-        writePlugins(metaMeta, metalsPluginDetails, jdiToolsPluginDetails)
+        writePlugins(metaMeta, metalsPlugin, jdiToolsPluginDetails)
       writtenMeta || writtenPlugin
     }
   }
@@ -411,14 +420,14 @@ object SbtBuildTool {
   /**
    * Short description and artifact for the sbt-metals plugin
    */
-  private def metalsPluginDetails: PluginDetails = {
+  private def metalsPluginDetails(version: String): PluginDetails = {
     PluginDetails(
       Seq(
         "This plugin enables semantic information to be produced by sbt.",
         "It also adds support for debugging using the Debug Adapter Protocol",
       ),
-      s""""org.scalameta" % "sbt-metals" % "${BuildInfo.metalsVersion}"""",
-      sonatypeResolver(BuildInfo.metalsVersion),
+      s""""org.scalameta" % "sbt-metals" % "$version"""",
+      sonatypeResolver(version),
     )
   }
 

@@ -475,6 +475,7 @@ lazy val metals = project
       "gradleBloopVersion" -> V.gradleBloop,
       "mavenBloopVersion" -> V.mavenBloop,
       "sbt2Version" -> V.sbt2Version,
+      "sbtMetalsForSbt20" -> V.sbtMetalsForSbt20,
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb(scalaVersion.value),
       "javaSemanticdbVersion" -> V.javaSemanticdb,
@@ -532,6 +533,8 @@ lazy val `sbt-metals` = project
       if212 = List("-release", "8"),
     ),
     scriptedLaunchOpts ++= Seq(s"-Dplugin.version=${version.value}"),
+    scriptedSbt := (if (scalaBinaryVersion.value == "2.12") "1.13.1"
+                    else V.sbt2Version),
     (pluginCrossBuild / sbtVersion) := {
       scalaBinaryVersion.value match {
         case "2.12" => "1.5.8"
