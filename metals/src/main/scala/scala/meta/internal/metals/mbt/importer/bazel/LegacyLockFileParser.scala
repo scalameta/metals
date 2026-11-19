@@ -30,8 +30,9 @@ class LegacyLockFileParser private[bazel] (dependencies: JsonArray)
   override def parse(
       repositoryNames: Seq[String],
       extDirs: Seq[ScannedExtDir],
+      extensionPrefix: Option[String],
   ): Seq[MbtDependencyModule] = {
-    val deps = dependencies.iterator().asScala.toSeq
+    val deps = dependencies.asScala.toSeq
 
     // Group by base coordinate to pair JARs with sources
     val jarDeps = deps.filter { elem =>
@@ -45,9 +46,18 @@ class LegacyLockFileParser private[bazel] (dependencies: JsonArray)
       }
     }
 
-    jarDeps.flatMap { elem =>
-      parseLegacyDependency(elem, deps, repositoryNames, extDirs)
+    val results = jarDeps.flatMap { elem =>
+      parseLegacyDependency(
+        elem,
+        deps,
+        repositoryNames,
+        extDirs,
+        extensionPrefix,
+      )
     }
+    val (missingIds, modules) = results.partitionMap(identity)
+    logMissingJars(missingIds)
+    modules
   }
 
   private def parseLegacyDependency(
@@ -55,7 +65,8 @@ class LegacyLockFileParser private[bazel] (dependencies: JsonArray)
       allDeps: Seq[JsonElement],
       repositoryNames: Seq[String],
       extDirs: Seq[ScannedExtDir],
-  ): Option[MbtDependencyModule] = {
+      extensionPrefix: Option[String],
+  ): Option[Either[String, MbtDependencyModule]] = {
     Try {
       val obj = elem.getAsJsonObject
       val coord =
@@ -82,7 +93,12 @@ class LegacyLockFileParser private[bazel] (dependencies: JsonArray)
           // Find JAR path - try local paths first
           val jarPath = file
             .flatMap { f =>
-              findJarFromLegacyPath(f, repositoryNames, extDirs)
+              findJarFromLegacyPath(
+                f,
+                repositoryNames,
+                extDirs,
+                extensionPrefix,
+              )
             }
             .orElse {
               findJarPath(
@@ -91,66 +107,81 @@ class LegacyLockFileParser private[bazel] (dependencies: JsonArray)
                 version,
                 repositoryNames,
                 extDirs,
+                extensionPrefix,
               )
             }
             .orElse {
-              scribe.warn(
-                s"Downloading from URL, could not find locally: $url"
-              )
               url.flatMap { u =>
+                scribe.debug(
+                  s"Downloading from URL, could not find locally: $u"
+                )
                 downloadToM2Cache(u, groupPath, artifactId, version, jarName)
               }
             }
 
-          jarPath.map { jar =>
-            // Look for corresponding sources in the dependencies array
-            val sourcesCoord = s"$groupId:$artifactId:jar:sources:$version"
-            val sourcesEntry = allDeps.find { e =>
-              e.isJsonObject &&
-              Option(e.getAsJsonObject.get("coord"))
-                .map(_.getAsString)
-                .contains(sourcesCoord)
-            }
-
-            val sourcesFile = sourcesEntry.flatMap { e =>
-              Option(e.getAsJsonObject.get("file")).map(_.getAsString)
-            }
-            val sourcesUrl = sourcesEntry.flatMap { e =>
-              Option(e.getAsJsonObject.get("url")).map(_.getAsString)
-            }
-
-            val sourcesJarName = s"$artifactId-$version-sources.jar"
-            val sourcesPath = sourcesFile
-              .flatMap { f =>
-                findJarFromLegacyPath(f, repositoryNames, extDirs)
+          jarPath match {
+            case Some(jar) =>
+              // Look for corresponding sources in the dependencies array
+              val sourcesCoord = s"$groupId:$artifactId:jar:sources:$version"
+              val sourcesEntry = allDeps.find { e =>
+                e.isJsonObject &&
+                Option(e.getAsJsonObject.get("coord"))
+                  .map(_.getAsString)
+                  .contains(sourcesCoord)
               }
-              .orElse {
-                findSourcesPath(
-                  groupId,
-                  artifactId,
-                  version,
-                  repositoryNames,
-                  extDirs,
-                )
+
+              val sourcesFile = sourcesEntry.flatMap { e =>
+                Option(e.getAsJsonObject.get("file")).map(_.getAsString)
               }
-              .orElse {
-                // Download sources from URL if available
-                sourcesUrl.flatMap { u =>
-                  downloadToM2Cache(
-                    u,
-                    groupPath,
-                    artifactId,
-                    version,
-                    sourcesJarName,
+              val sourcesUrl = sourcesEntry.flatMap { e =>
+                Option(e.getAsJsonObject.get("url")).map(_.getAsString)
+              }
+
+              val sourcesJarName = s"$artifactId-$version-sources.jar"
+              val sourcesPath = sourcesFile
+                .flatMap { f =>
+                  findJarFromLegacyPath(
+                    f,
+                    repositoryNames,
+                    extDirs,
+                    extensionPrefix,
                   )
                 }
-              }
+                .orElse {
+                  findSourcesPath(
+                    groupId,
+                    artifactId,
+                    version,
+                    repositoryNames,
+                    extDirs,
+                    extensionPrefix,
+                  )
+                }
+                .orElse {
+                  // Download sources from URL if available
+                  sourcesUrl.flatMap { u =>
+                    downloadToM2Cache(
+                      u,
+                      groupPath,
+                      artifactId,
+                      version,
+                      sourcesJarName,
+                    )
+                  }
+                }
 
-            MbtDependencyModule(
-              id = id,
-              jar = jar,
-              sources = sourcesPath.orNull,
-            )
+              Some(
+                Right(
+                  MbtDependencyModule(
+                    id = id,
+                    jar = jar,
+                    sources = sourcesPath.orNull,
+                  )
+                )
+              )
+            case None =>
+              scribe.debug(s"bazel-mbt: JAR not found locally for $id")
+              Some(Left(id))
           }
         }
       }
@@ -165,13 +196,21 @@ class LegacyLockFileParser private[bazel] (dependencies: JsonArray)
       filePath: String,
       repositoryNames: Seq[String],
       extDirs: Seq[ScannedExtDir],
+      extensionPrefix: Option[String],
   ): Option[String] = {
     val patterns =
       (repositoryNames.map(repo => s"$repo/$filePath") ++
         Seq(s"maven/$filePath", filePath)).distinct
 
     extDirs.view
-      .flatMap(findInExternalRepositories(_, patterns, repositoryNames))
+      .flatMap(
+        findInExternalRepositories(
+          _,
+          patterns,
+          repositoryNames,
+          extensionPrefix,
+        )
+      )
       .headOption
       .map(_.toURI.toString)
   }

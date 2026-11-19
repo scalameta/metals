@@ -19,6 +19,10 @@ object BazelFetch {
   def commandArgs(labels: Iterable[String]): List[String] =
     List("bazel", "fetch", "--keep_going") ++ labels
 
+  def repoCommandArgs(repos: Iterable[String]): List[String] =
+    List("bazel", "fetch", "--force", "--keep_going") ++
+      repos.map(r => if (r.startsWith("--repo=")) r else s"--repo=$r")
+
   /**
    * Sorted, distinct labels split into batches whose command line stays
    * below [[SystemProcess.processCmdCharLimit]].
@@ -27,17 +31,31 @@ object BazelFetch {
       labels: Iterable[String],
       limit: Int = SystemProcess.processCmdCharLimit,
   ): List[List[String]] =
-    labels.toList.distinct.sorted
+    batchByCommandLength(labels, limit)(commandArgs)
+
+  /**
+   * Sorted, distinct Bzlmod repository names split into `--repo=` batches
+   * whose command line stays below [[SystemProcess.processCmdCharLimit]].
+   */
+  def repoBatches(
+      repos: Iterable[String],
+      limit: Int = SystemProcess.processCmdCharLimit,
+  ): List[List[String]] =
+    batchByCommandLength(repos, limit)(repoCommandArgs)
+
+  private def batchByCommandLength(
+      items: Iterable[String],
+      limit: Int,
+  )(toCommandArgs: List[String] => List[String]): List[List[String]] =
+    items.toList.distinct.sorted
       .foldLeft(List.empty[List[String]]) {
-        case (batch :: done, label) if commandLength(label :: batch) <= limit =>
-          (label :: batch) :: done
-        case (done, label) => List(label) :: done
+        case (batch :: done, item)
+            if toCommandArgs(item :: batch).mkString(" ").length <= limit =>
+          (item :: batch) :: done
+        case (done, item) => List(item) :: done
       }
       .map(_.reverse)
       .reverse
-
-  private def commandLength(labels: List[String]): Int =
-    commandArgs(labels).mkString(" ").length
 
   /**
    * Fetch problems are logged and the import continues with whatever is on
@@ -55,19 +73,42 @@ object BazelFetch {
         s"bazel-mbt: fetching ${labels.size} external dependency label(s) in ${all.size} batch(es)"
       )
       all.foldLeft(Future.unit) { (previous, batch) =>
-        previous.flatMap(_ => fetch(batch, env, mbtJavaHome))
+        previous.flatMap(_ => runFetch(commandArgs(batch), env, mbtJavaHome))
       }
     }
 
-  private def fetch(
-      labels: List[String],
+  /**
+   * Force-fetch missing or GC-evicted Bzlmod per-artifact repositories
+   * (`--repo=@@<canonicalRepoName>`) so dangling symlinks under `external/`
+   * are repopulated before lockfile JAR paths are resolved.
+   */
+  def repositories(
+      repos: Set[String],
+      env: BazelQuery.Env,
+      mbtJavaHome: Option[String] = None,
+  )(implicit ec: ExecutionContext): Future[Unit] =
+    if (repos.isEmpty) Future.unit
+    else {
+      val all = repoBatches(repos)
+      scribe.info(
+        s"bazel-mbt: fetching ${repos.size} missing/evicted artifact repo(s) in ${all.size} batch(es)"
+      )
+      all.foldLeft(Future.unit) { (previous, batch) =>
+        previous.flatMap(_ =>
+          runFetch(repoCommandArgs(batch), env, mbtJavaHome)
+        )
+      }
+    }
+
+  private def runFetch(
+      args: List[String],
       env: BazelQuery.Env,
       mbtJavaHome: Option[String],
   )(implicit ec: ExecutionContext): Future[Unit] =
     env.shellRunner
       .run(
         "bazel-mbt-fetch",
-        commandArgs(labels),
+        args,
         env.projectRoot,
         redirectErrorOutput = false,
         mbtJavaHome.orElse(env.javaHome),
