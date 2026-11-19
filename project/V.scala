@@ -81,6 +81,7 @@ object V {
   val scribe = "3.19.1"
 
   val sbt2Version = "2.0.12"
+  val sbt2ScriptedVersion = "2.1.0"
 
   // sbt 1 version recommended to users and used to generate test builds.
   // The Metals build itself is sbt 2; see project/build.properties.
