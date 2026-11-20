@@ -246,7 +246,7 @@ class BspConnector(
             )
           progress.message = s"choosing build server"
           for {
-            Some(item) <- client
+            case Some(item) <- client
               .showMessageRequest(
                 query.params,
                 ConnectionProvider.ConnectRequestCancelationGroup,

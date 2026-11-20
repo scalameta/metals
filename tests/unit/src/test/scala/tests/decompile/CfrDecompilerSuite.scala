@@ -24,7 +24,7 @@ class CfrDecompilerSuite extends BaseSuite {
     val decompiler = new CfrDecompiler()
 
     for {
-      Right(decompiledcode) <- decompiler.decompilePath(
+      case Right(decompiledcode) <- decompiler.decompilePath(
         optionClassUri.toAbsolutePath,
         Nil,
       )
@@ -42,7 +42,7 @@ class CfrDecompilerSuite extends BaseSuite {
   test("decompile-non-existent-class") {
     val decompiler = new CfrDecompiler()
     for {
-      Left(error) <- decompiler.decompilePath(
+      case Left(error) <- decompiler.decompilePath(
         URI.create("file:///foo/bar/non-existent-class.class").toAbsolutePath,
         Nil,
       )
