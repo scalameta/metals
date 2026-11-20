@@ -219,6 +219,8 @@ class ProjectMetalsLspService(
         workDoneProgress = workDoneProgress,
         buildTargetClasses = buildTargetClasses,
         testProvider = testProvider,
+        debugServerStartTimeoutSeconds =
+          clientConfig.initialConfig.debugServerStartTimeout,
       )(ec)
     }
 

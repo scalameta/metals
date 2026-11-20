@@ -424,17 +424,19 @@ class DebugProvider(
           val startupTimeout =
             clientConfig.initialConfig.debugServerStartTimeout
 
-          conn
-            .withTimeout(
-              startupTimeout,
-              TimeUnit.SECONDS,
-              Some("starting the debug sessions"),
-            )
-            .recover { case exception =>
-              connectedToServer.tryFailure(exception)
-              cancelPromise.trySuccess(())
-              throw exception
-            }
+          val started =
+            if (buildServer.isMbt) conn
+            else
+              conn.withTimeout(
+                startupTimeout,
+                TimeUnit.SECONDS,
+                Some("starting the debug sessions"),
+              )
+          started.recover { case exception =>
+            connectedToServer.tryFailure(exception)
+            cancelPromise.trySuccess(())
+            throw exception
+          }
         }
     }
 

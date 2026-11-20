@@ -2154,7 +2154,9 @@ abstract class MetalsLspService(
         val connectionOpt = buildTargets.buildServerOf(target)
         val isMbt =
           connectionOpt.exists(c => MbtBuildServer.isMbtServer(c.name))
-        if (isMbt) {
+        if (isMbt && path.exists(_.isJava) && params.runType == "testFile") {
+          action(params)
+        } else if (isMbt) {
           connectionOpt
             .map { connection =>
               val compileParams = new b.CompileParams(List(target).asJava)
@@ -2225,37 +2227,14 @@ abstract class MetalsLspService(
       noDebug: Boolean,
   ): Future[DebugSession] = {
     val targets = params.getTargets.asScala.toSeq
-    val mbtConnections = targets.flatMap { target =>
-      val connOpt = buildTargets.buildServerOf(target)
-      connOpt
-        .filter(c => MbtBuildServer.isMbtServer(c.name))
-        .map(conn => (conn, target))
+    val externalTargets = targets.filterNot { target =>
+      buildTargets
+        .buildServerOf(target)
+        .exists(c => MbtBuildServer.isMbtServer(c.name))
     }
-    val compileFuture =
-      if (mbtConnections.isEmpty) Future.unit
-      else {
-        val byConn = mbtConnections.groupBy(_._1).view.mapValues(_.map(_._2))
-        Future
-          .traverse(byConn.toSeq) { case (conn, connTargets) =>
-            val compileParams = new b.CompileParams(connTargets.asJava)
-            conn
-              .compile(compileParams, timeout = None)
-              .asScala
-              .flatMap { result =>
-                if (result.getStatusCode == b.StatusCode.ERROR)
-                  Future.failed(
-                    new Exception("MBT compile failed before debug session")
-                  )
-                else Future.unit
-              }
-          }
-          .map(_ => ())
-      }
-    compileFuture.flatMap { _ =>
-      debugProvider
-        .ensureNoWorkspaceErrors(targets)
-        .flatMap(_ => debugProvider.asSession(params, noDebug))
-    }
+    debugProvider
+      .ensureNoWorkspaceErrors(externalTargets)
+      .flatMap(_ => debugProvider.asSession(params, noDebug))
   }
 
   def discoverMainClasses(
