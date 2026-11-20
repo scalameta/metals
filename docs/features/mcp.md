@@ -226,6 +226,11 @@ the `-Dmetals.max-mcp-search-results`
 [server property](../integrations/new-editor.md#metals-server-properties), which
 defaults to `100`.
 
+The number of errors and warnings returned by `compile-file`, `compile-module`
+and `compile-full` is capped by the `-Dmetals.max-mcp-compile-diagnostics`
+[server property](../integrations/new-editor.md#metals-server-properties), which
+defaults to `10`.
+
 ## Tips for AI Agents
 
 When working with Metals MCP, AI agents should:

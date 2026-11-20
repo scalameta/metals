@@ -7,11 +7,8 @@ import scala.concurrent.Promise
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ConnectionProvider
-import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.io.AbsolutePath
 
@@ -27,16 +24,15 @@ import org.eclipse.lsp4j.services.LanguageClient
 class MetalsMcpServer(
     protected val queryEngine: McpQueryEngine,
     protected val projectPath: AbsolutePath,
-    protected val compilations: Compilations,
+    protected val compiler: McpCompiler,
     protected val focusedDocument: () => Option[AbsolutePath],
-    protected val diagnostics: Diagnostics,
     protected val buildTargets: BuildTargets,
     protected val mcpTestRunner: McpTestRunner,
     protected val clientName: String,
     protected val projectName: String,
     protected val languageClient: LanguageClient,
     protected val connectionProvider: ConnectionProvider,
-    protected val scalaVersionSelector: ScalaVersionSelector,
+    protected val dependencyFinder: McpDependencyFinder,
     protected val scalafmtRunner: ScalafmtRunner,
     protected val scalafixLlmRuleProvider: ScalafixLlmRuleProvider,
     protected val indexingPromise: Promise[Unit],
