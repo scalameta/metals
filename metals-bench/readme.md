@@ -153,3 +153,8 @@ Open the `*.svg` files in your browser to see the graphs.
 [info] ClasspathIndexingBench.run    ss   10  919.237  ± 42.827  ms/op # JDK 8
 [info] ClasspathIndexingBench.run    ss   10  1316.451 ± 22.595  ms/op # JDK 11
 ```
+
+## Scala 2 core-type recovery guard
+
+See [the core-type guard benchmark](core-type-guard.md) for real-request JMH
+scenarios, a reproducible guard-on/off comparison, and its statistical protocol.
