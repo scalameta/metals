@@ -846,6 +846,8 @@ lazy val input = project
     sharedSettings,
     scalacOptions -= "-Xsource:3",
     publish / skip := true,
+    // Kotlin test inputs for KotlinMtags; sbt compiles only .scala and .java files.
+    Compile / unmanagedSourceDirectories += (Compile / sourceDirectory).value / "kotlin",
     Compile / unmanagedJars ++= List(
       // Normally, we would be able to `.dependsOn(semanticdb-javac)`, but it
       // doesn't work because the project doesn't have a normal resource file

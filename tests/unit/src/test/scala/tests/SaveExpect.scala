@@ -58,6 +58,7 @@ object SaveExpect {
         () => new JavacMtagsExpectSuite(assertCompat = false),
         () => new ProtobufMtagsExpectSuite,
         () => new ProtobufMtagsV2ExpectSuite,
+        () => new KotlinMtagsExpectSuite,
         () => new DefinitionScala2Suite,
         () => new DefinitionScala3Suite,
         () => new SemanticdbScala2Suite,
