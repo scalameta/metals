@@ -174,6 +174,74 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
       assert(items.contains(name), clue(items))
   }
 
+  private def importing(name: String) =
+    main.replace("package demo\n", s"package demo\nimport $name\n")
+
+  test("completion-import-jdk-class") {
+    val text = importing("java.util.ArrayL@@")
+    assertEquals(completions(text), List("ArrayList"))
+  }
+
+  test("completion-import-stdlib-class") {
+    val text = importing("kotlin.text.Rege@@")
+    assertEquals(completions(text), List("Regex", "RegexOption"))
+  }
+
+  test("completion-import-stdlib-function") {
+    val text = importing("kotlin.collections.listO@@")
+    assertEquals(completions(text), List("listOf", "listOfNotNull"))
+  }
+
+  test("completion-import-subpackage") {
+    val text = importing("java.ut@@")
+    assertEquals(completions(text), List("util"))
+  }
+
+  test("completion-import-source-class") {
+    val text = importing("demo.Us@@")
+    assertEquals(completions(text), List("User"))
+  }
+
+  test("completion-qualified-jdk-class") {
+    val text =
+      main.replace("  val sb", "  val l = java.util.ArrayL@@\n  val sb")
+    assertEquals(completions(text), List("ArrayList"))
+  }
+
+  test("completion-escaped-names") {
+    val text = main.replace("  val sb", "  wh@@\n  val sb") +
+      "fun `when`() {}\nclass `white space`\n"
+    val items = pc.complete(at(mainPath, text)).get().getItems.asScala
+    assertEquals(
+      items.map(i => i.getLabel -> i.getInsertText).toList,
+      List("when" -> "`when`", "white space" -> "`white space`"),
+    )
+  }
+
+  test("completion-inside-backticks") {
+    val text = main.replace("  val sb", "  `wh@@`\n  val sb") +
+      "fun `when`() {}\n"
+    val items = pc.complete(at(mainPath, text)).get().getItems.asScala
+    assertEquals(
+      items.map(i => i.getLabel -> i.getInsertText).toList,
+      List("when" -> "when"),
+    )
+  }
+
+  test("completion-import-extension") {
+    val text = importing("kotlin.text.substringB@@")
+    assertEquals(
+      completions(text),
+      List("substringBefore", "substringBeforeLast"),
+    )
+  }
+
+  test("completion-qualified-skips-extension") {
+    val text =
+      main.replace("  val sb", "  val l = kotlin.text.substringB@@\n  val sb")
+    assertEquals(completions(text), Nil)
+  }
+
   test("completion-scope") {
     val text = main.replace("  val sb", "  gre@@\n  val sb")
     assert(completions(text).contains("greet"), clue(completions(text)))

@@ -56,6 +56,7 @@ import org.jetbrains.kotlin.analysis.api.symbols.KaClassifierSymbol
 import org.jetbrains.kotlin.analysis.api.symbols.KaConstructorSymbol
 import org.jetbrains.kotlin.analysis.api.symbols.KaDeclarationSymbol
 import org.jetbrains.kotlin.analysis.api.symbols.KaFunctionSymbol
+import org.jetbrains.kotlin.analysis.api.symbols.KaPackageSymbol
 import org.jetbrains.kotlin.analysis.api.symbols.KaSymbol
 import org.jetbrains.kotlin.analysis.api.symbols.markers.KaNamedSymbol
 import org.jetbrains.kotlin.analysis.api.types.KaClassType
@@ -67,9 +68,11 @@ import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtImportDirective
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtPsiFactory
 import org.jetbrains.kotlin.psi.KtQualifiedExpression
+import org.jetbrains.kotlin.renderer.RenderingUtilsKt
 import org.jetbrains.kotlin.types.Variance
 
 /**
@@ -316,12 +319,25 @@ case class KotlinPresentationCompiler(
               call
             case _ => ref
           }
-          selector.getParent match {
+          val found = selector.getParent match {
             case qualified: KtQualifiedExpression
                 if qualified.getSelectorExpression == selector =>
-              members(s, copy, ref, qualified.getReceiverExpression, matches)
+              val receiver = qualified.getReceiverExpression
+              packageOf(s, receiver) match {
+                case Some(pkg) =>
+                  val inImport = PsiTreeUtil.getParentOfType(
+                    ref,
+                    classOf[KtImportDirective]
+                  ) != null
+                  packageMembers(s, pkg, matches, inImport)
+                case None => members(s, copy, ref, receiver, matches)
+              }
             case _ => scopeNames(s, copy, ref, matches)
           }
+          // In `` `wh@@` `` the user already typed the backticks.
+          if (ref.getText.startsWith("`"))
+            found.foreach(item => item.setInsertText(item.getLabel))
+          found
         }
       }
       val unique = items.groupBy(_.getLabel).values.map(_.head).toList
@@ -347,6 +363,50 @@ case class KotlinPresentationCompiler(
       if callable.isExtension && isApplicable(checker, callable)
     } yield callableItem(s, callable)
     memberItems ++ extensionItems
+  }
+
+  /** The package that `receiver` names, as `java.util` in `java.util.List`. */
+  private def packageOf(
+      s: KaSession,
+      receiver: KtExpression
+  ): Option[KaPackageSymbol] = {
+    val name = receiver match {
+      case q: KtQualifiedExpression => q.getSelectorExpression
+      case e => e
+    }
+    name match {
+      case r: KtNameReferenceExpression =>
+        Option(s.resolveToSymbol(ReferenceUtilsKt.getMainReference(r)))
+          .collect { case pkg: KaPackageSymbol => pkg }
+      case _ => None
+    }
+  }
+
+  /** Classes, top-level callables and subpackages of `pkg`. */
+  private def packageMembers(
+      s: KaSession,
+      pkg: KaPackageSymbol,
+      matches: Name => Boolean,
+      inImport: Boolean
+  ): List[CompletionItem] = {
+    val scope = s.getPackageScope(pkg)
+    val names = libraryNames(pkg.getFqName.asString).toList
+      .map(Name.identifier)
+      .filter(matches)
+      .asJava
+    val classifiers = Kt.toList(scope.classifiers(Kt.predicate(matches))) ++
+      Kt.toList(scope.classifiers(names))
+    // An import can name an extension; an expression can call it only on a
+    // receiver.
+    val callables = (Kt.toList(scope.callables(Kt.predicate(matches))) ++
+      Kt.toList(scope.callables(names))).filter(inImport || !_.isExtension)
+    val packages = Kt
+      .toList(scope.getPackageSymbols(Kt.predicate(matches)))
+      .map(p =>
+        nameItem(Some(p.getFqName.shortName), CompletionItemKind.Module)
+      )
+    classifiers.map(classifierItem) ++ callables.map(callableItem(s, _)) ++
+      packages
   }
 
   private val DefaultImports = List(
@@ -432,12 +492,11 @@ case class KotlinPresentationCompiler(
 
   private def callableItem(s: KaSession, symbol: KaCallableSymbol) = {
     val name = symbol match {
-      case named: KaNamedSymbol => named.getName.asString
-      case _ =>
-        Option(symbol.getCallableId).fold("")(_.getCallableName.asString)
+      case named: KaNamedSymbol => Option(named.getName)
+      case _ => Option(symbol.getCallableId).map(_.getCallableName)
     }
-    val item = new CompletionItem(name)
-    item.setKind(
+    val item = nameItem(
+      name,
       if (symbol.isInstanceOf[KaFunctionSymbol]) CompletionItemKind.Method
       else CompletionItemKind.Property
     )
@@ -447,10 +506,14 @@ case class KotlinPresentationCompiler(
     item
   }
 
-  private def classifierItem(symbol: KaClassifierSymbol) = {
-    val name = Option(symbol.getName).map(_.asString).getOrElse("")
-    val item = new CompletionItem(name)
-    item.setKind(CompletionItemKind.Class)
+  private def classifierItem(symbol: KaClassifierSymbol) =
+    nameItem(Option(symbol.getName), CompletionItemKind.Class)
+
+  /** Inserts a keyword or a name with spaces in backticks. */
+  private def nameItem(name: Option[Name], kind: CompletionItemKind) = {
+    val item = new CompletionItem(name.fold("")(_.asString))
+    name.foreach(n => item.setInsertText(RenderingUtilsKt.render(n, false)))
+    item.setKind(kind)
     item
   }
 
