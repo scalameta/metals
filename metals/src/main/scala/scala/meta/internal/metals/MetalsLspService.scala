@@ -485,6 +485,7 @@ abstract class MetalsLspService(
     buildTargets,
     compilers,
     scalaVersionSelector,
+    () => implementationProvider,
   )
 
   protected val packageProvider: PackageProvider =
