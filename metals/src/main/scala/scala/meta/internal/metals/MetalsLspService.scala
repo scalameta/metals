@@ -1278,7 +1278,8 @@ abstract class MetalsLspService(
    */
   protected def fileWatchFilter(path: Path): Boolean = {
     val abs = AbsolutePath(path)
-    abs.isScalaOrJava || abs.isProtoFilename || abs.isSemanticdb ||
+    abs.isScalaOrJava || abs.isProtoFilename || abs.isKotlinFilename ||
+    abs.isSemanticdb ||
     abs.isInBspDirectory(folder)
   }
 

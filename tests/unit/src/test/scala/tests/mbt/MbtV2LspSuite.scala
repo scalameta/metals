@@ -85,6 +85,68 @@ class MbtV2LspSuite extends tests.BaseLspSuite("mbt-v2") {
     } yield ()
   }
 
+  // The hint line about library search shows up only on some runs.
+  private def workspaceSymbols(query: String): String =
+    server
+      .workspaceSymbol(query)
+      .linesIterator
+      .filterNot(_.startsWith("Add ';'"))
+      .mkString("\n")
+
+  test("kotlin") {
+    cleanWorkspace()
+    val account = "a/src/main/kotlin/a/Account.kt"
+    val ledger = "a/src/main/kotlin/a/Ledger.kt"
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/$account
+            |package a
+            |
+            |class Account(val owner: String) {
+            |  fun deposit(amount: Long) {}
+            |}
+            |""".stripMargin
+      )
+      _ = assertNoDiff(
+        workspaceSymbols("deposit"),
+        "a.Account#deposit",
+      )
+      _ <- server.didOpen(account)
+      _ <- server.didChange(account)(
+        _.replace(
+          "fun deposit(amount: Long) {}",
+          "fun deposit(amount: Long) {}\n  fun withdraw(amount: Long) {}",
+        )
+      )
+      _ <- server.didSave(account)
+      _ = assertNoDiff(
+        workspaceSymbols("withdraw"),
+        "a.Account#withdraw",
+        "a function added in a saved Kotlin file was not indexed",
+      )
+      _ = FileLayout.fromString(
+        s"""|/$ledger
+            |package a
+            |
+            |object Ledger {
+            |  fun balance(): Long = 0
+            |}
+            |""".stripMargin,
+        root = server.workspace,
+      )
+      _ <- server.didChangeWatchedFiles(ledger, l.FileChangeType.Created)
+      _ = assertNoDiff(
+        workspaceSymbols("balance"),
+        "a.Ledger#balance",
+        "a newly created Kotlin file was not indexed",
+      )
+    } yield ()
+  }
+
   test("file-watcher".flaky) {
     cleanWorkspace()
     val cafe = "a/src/main/scala/a/Cafe.scala"

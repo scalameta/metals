@@ -488,7 +488,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
       (sourceItem, targets) <- data.sourceItemsToBuildTarget
       if sourceItem.exists
       source <- sourceItem.listRecursiveOrJar
-      if source.isScalaOrJava
+      if isIndexedSource(source)
     } {
       targets.asScala.foreach { target =>
         data.linkSourceFile(target, source)
@@ -942,6 +942,10 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
     (toplevels, overrides, toplevelMembersMap)
   }
 
+  // The same files are indexed at startup and after a change.
+  private def isIndexedSource(path: AbsolutePath): Boolean =
+    path.isScalaOrJava || path.isKotlinFilename
+
   // NOTE: this is largely a blocking non-async method. It returns a
   // Future[Unit] to let tests await on the recompilation of the Turbine
   // classpath for Java source file changes. You can ignore the Future
@@ -952,7 +956,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
     val data = buildData().map(_.data)
     val futures = for {
       path <- paths.iterator
-      if path.isScalaOrJava
+      if isIndexedSource(path)
     } yield {
       indexSourceFile(
         path,

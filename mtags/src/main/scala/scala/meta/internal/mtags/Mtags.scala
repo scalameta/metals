@@ -57,6 +57,9 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
       )
     } else if (language.isProtobuf) {
       config.protoInstance(input, includeGeneratedSymbols = true).index()
+    } else if (language.isKotlin) {
+      addLines(language, input.text)
+      new KotlinMtags(input, includeMembers = false).index()
     } else {
       TextDocument()
     }
@@ -102,6 +105,11 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
     } else if (language.isProtobuf) {
       config.protoInstance(input, includeGeneratedSymbols = true).index()
       (TextDocument(), Nil, Nil)
+    } else if (language.isKotlin) {
+      addLines(language, input.text)
+      val indexer = new KotlinMtags(input, includeMembers)
+      val doc = indexer.index()
+      (doc, indexer.overrides(), indexer.toplevelMembers())
     } else {
       (TextDocument(), Nil, Nil)
     }
@@ -129,6 +137,8 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
         val mtags =
           new ScalaToplevelMtags(input, true, includeMembers, dialect)
         mtags.index()
+      case _ if input.path.isKotlinFilename =>
+        new KotlinMtags(input, includeMembers).index()
       case _ =>
         TextDocument()
     }
@@ -165,6 +175,8 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
         ScalaMtags.index(input, dialect).index()
       } else if (language == Semanticdb.Language.PROTOBUF) {
         config.protoInstance(input, includeGeneratedSymbols = true).index()
+      } else if (language == Semanticdb.Language.KOTLIN) {
+        new KotlinMtags(input, includeMembers = true).index()
       } else {
         TextDocument()
       }
@@ -210,6 +222,14 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
           config.protoInstance(
             input,
             includeGeneratedSymbols = true,
+            includeFuzzyReferences = includeReferences
+          )
+        )
+      } else if (language == Semanticdb.Language.KOTLIN) {
+        Some(
+          new KotlinMtags(
+            input,
+            includeMembers = true,
             includeFuzzyReferences = includeReferences
           )
         )

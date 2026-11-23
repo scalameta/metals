@@ -158,6 +158,47 @@ class MbtWorkspaceSymbolSearchSuite extends munit.FunSuite {
     )
   }
 
+  test("kotlin") {
+    FileLayout.fromString(
+      """|/com/Account.kt
+         |package com
+         |
+         |class Account(val owner: String) {
+         |  fun deposit(amount: Long) {}
+         |  companion object {
+         |    fun empty(): Account = Account("")
+         |  }
+         |}
+         |
+         |object AccountRegistry
+         |
+         |fun openAccount(owner: String): Account = Account(owner)
+         |""".stripMargin,
+      root = workspace(),
+    )
+    val provider = newProvider()
+    workspace.executeCommand("git init -b main")
+    workspace.gitCommitAllChanges()
+    assertEquals(
+      provider.onReindex().awaitBackgroundJobs(),
+      IndexingStats(totalFiles = 1, updatedFiles = 1),
+    )
+    assertNoDiff(
+      formatSymbols(provider.queryWorkspaceSymbol("Account")),
+      """
+        |Object AccountRegistry com.
+        |Class Account com.
+        |Method openAccount com.
+        |""".stripMargin,
+    )
+    assertNoDiff(
+      formatSymbols(provider.queryWorkspaceSymbol("openAcc")),
+      """
+        |Method openAccount com.
+        |""".stripMargin,
+    )
+  }
+
   test("turbine-indexes-proto-java-package-with-protobuf-lsp-disabled") {
     FileLayout.fromString(
       """

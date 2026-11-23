@@ -216,6 +216,7 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     if (filename.endsWith(".java")) Semanticdb.Language.JAVA
     else if (isScalaFilename(filename)) Semanticdb.Language.SCALA
     else if (filename.endsWith(".proto")) Semanticdb.Language.PROTOBUF
+    else if (filename.endsWith(".kt")) Semanticdb.Language.KOTLIN
     else Semanticdb.Language.UNKNOWN_LANGUAGE
   }
   def filenameToLanguage(filename: String): Language = {
@@ -544,6 +545,9 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     def isProtoFilename: Boolean = {
       filename.isProtoFilename
     }
+    def isKotlinFilename: Boolean = {
+      filename.isKotlinFilename
+    }
     def isScala: Boolean = {
       toLanguage == Language.SCALA && isFile
     }
@@ -692,6 +696,7 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     def isJava: Boolean = language == Semanticdb.Language.JAVA
     def isScala: Boolean = language == Semanticdb.Language.SCALA
     def isProtobuf: Boolean = language == Semanticdb.Language.PROTOBUF
+    def isKotlin: Boolean = language == Semanticdb.Language.KOTLIN
     def toPCLanguage: pc.Language =
       language match {
         case Semanticdb.Language.JAVA => pc.Language.JAVA

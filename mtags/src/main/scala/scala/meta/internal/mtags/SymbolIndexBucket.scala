@@ -56,7 +56,7 @@ class SymbolIndexBucket(
   ): List[IndexingResult] = {
     if (sourceJars.addEntry(dir.toNIO)) {
       dir.listRecursive.toList.flatMap {
-        case source if source.isScala =>
+        case source if source.isScala || source.isKotlinFilename =>
           addSourceFile(source, Some(dir), isJava = false)
         case _ =>
           None
@@ -91,6 +91,8 @@ class SymbolIndexBucket(
               addSourceFile(source, None, isJava = false)
             case source if source.isJava =>
               addSourceFile(source, None, isJava = true)
+            case source if source.isKotlinFilename =>
+              addSourceFile(source, None, isJava = false)
             case _ =>
               None
           }
@@ -154,7 +156,10 @@ class SymbolIndexBucket(
         .filterNot(_.symbol.isPackage)
         .map(_.symbol)
     val topLevels =
-      if (source.isScalaScript) sourceTopLevels.toList
+      // A Kotlin file name often differs from its declarations, so the
+      // location of a Kotlin symbol cannot be computed from the symbol.
+      if (source.isScalaScript || source.isKotlinFilename)
+        sourceTopLevels.toList
       else if (isJava) {
         sourceTopLevels.toList.headOption
           .filter(sym => !isTrivialToplevelSymbol(uri, sym, "java"))
@@ -189,7 +194,8 @@ class SymbolIndexBucket(
   ): Unit = {
     val extension = if (source.isJava) "java" else "scala"
     if (
-      source.isScalaScript || !isTrivialToplevelSymbol(
+      source.isScalaScript || source.isKotlinFilename ||
+      !isTrivialToplevelSymbol(
         path,
         toplevel,
         extension
@@ -320,7 +326,7 @@ class SymbolIndexBucket(
       retry: Boolean = true
   ): Unit = try {
     val docs: s.TextDocuments = PathIO.extension(file.toNIO) match {
-      case "scala" | "java" | "sc" =>
+      case "scala" | "java" | "sc" | "kt" =>
         val document = allSymbols(file)
         s.TextDocuments(List(document))
       case _ =>
