@@ -236,7 +236,6 @@ class FilterMapToCollectCodeActionSuite
        |}
        |""".stripMargin,
     s"""|${RewriteBracesParensCodeAction.toParens("map")}
-        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
         |${FilterMapToCollectCodeAction.title}
         |""".stripMargin,
     """|object Main {
@@ -250,7 +249,7 @@ class FilterMapToCollectCodeActionSuite
        |  }
        |}
        |""".stripMargin,
-    selectedActionIndex = 2,
+    selectedActionIndex = 1,
   )
 
   check(
