@@ -3,7 +3,10 @@ package tests
 import scala.util.Properties
 
 import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.io.AbsolutePath
 
 import munit.Location
 
@@ -64,6 +67,65 @@ class SbtVersionSuite extends BaseSuite {
 
   test("embedded-sbt-2-runner") {
     checkEmbeddedRunner(Some("2.0.11"), "2")
+  }
+
+  List("1.5.8", "1.13.1", "2.1.0", "2.1.1", "2.10.0").foreach { version =>
+    checkMetalsPlugin(Some(version), BuildInfo.metalsVersion)
+  }
+
+  List("2.0.0-RC11", "2.0.0", "2.0.12", "2.1.0-M1", "2.1.0-RC1")
+    .foreach { version =>
+      checkMetalsPlugin(Some(version), BuildInfo.sbtMetalsForSbt20)
+    }
+
+  checkMetalsPlugin(None, BuildInfo.metalsVersion)
+
+  test("metals-plugin-upgrade-from-sbt-2.0") {
+    val root = FileLayout.fromString(
+      """|/project/build.properties
+         |sbt.version=2.0.12
+         |""".stripMargin
+    )
+    assert(SbtBuildTool.writeSbtMetalsPlugins(root))
+    assertMetalsPluginVersion(root, BuildInfo.sbtMetalsForSbt20)
+
+    root.resolve("project/build.properties").writeText("sbt.version=2.1.0\n")
+    assert(SbtBuildTool.writeSbtMetalsPlugins(root))
+    assertMetalsPluginVersion(root, BuildInfo.metalsVersion)
+    assert(!SbtBuildTool.writeSbtMetalsPlugins(root))
+  }
+
+  private def checkMetalsPlugin(
+      sbtVersion: Option[String],
+      expectedVersion: String,
+  ): Unit = {
+    test(s"metals-plugin-${sbtVersion.getOrElse("unknown-sbt-version")}") {
+      val layout = sbtVersion
+        .map(version => s"/project/build.properties\nsbt.version=$version\n")
+        .getOrElse("")
+      val root = FileLayout.fromString(layout)
+      assert(SbtBuildTool.writeSbtMetalsPlugins(root))
+      assertMetalsPluginVersion(root, expectedVersion)
+      assert(!SbtBuildTool.writeSbtMetalsPlugins(root))
+    }
+  }
+
+  private def assertMetalsPluginVersion(
+      root: AbsolutePath,
+      expectedVersion: String,
+  ): Unit = {
+    val expected =
+      s"""addSbtPlugin("org.scalameta" % "sbt-metals" % "$expectedVersion")"""
+    List("project/metals.sbt", "project/project/metals.sbt").foreach { path =>
+      val contents = root.resolve(path).readText
+      assert(contents.linesIterator.contains(expected), contents)
+      assertEquals(
+        contents.contains(
+          "https://central.sonatype.com/repository/maven-snapshots"
+        ),
+        expectedVersion.contains("SNAPSHOT"),
+      )
+    }
   }
 
   private def checkEmbeddedRunner(
