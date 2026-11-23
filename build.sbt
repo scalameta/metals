@@ -641,6 +641,22 @@ lazy val `mtags-protobuf` = project
   )
   .dependsOn(interfaces, mtagsShared, `semanticdb-protoc`)
 
+lazy val `mtags-kotlin` = project
+  .settings(
+    sharedSettings,
+    scalaVersion := V.scala213,
+    crossScalaVersions := Seq(V.scala213),
+    libraryDependencies ++= List(
+      // A single jar with the Analysis API, the Kotlin compiler and the
+      // IntelliJ classes it needs; its POM lists no dependencies.
+      "org.jetbrains.dokka" % "analysis-kotlin-symbols" % V.kotlinAnalysisApi,
+      "org.jetbrains.kotlin" % "kotlin-stdlib" % V.kotlin,
+      "org.jetbrains.kotlin" % "kotlin-reflect" % V.kotlin,
+      "org.jetbrains.kotlinx" % "kotlinx-coroutines-core-jvm" % V.kotlinxCoroutines,
+    ),
+  )
+  .dependsOn(interfaces, mtagsShared)
+
 lazy val `gradle-extractor` = project
   .settings(scala213OnlyScalafix)
   .in(file("gradle-extractor"))
@@ -1062,6 +1078,16 @@ lazy val javapc = project
     Compile / resourceGenerators += packageJavaHeaderCompiler,
   )
   .dependsOn(mtest, `mtags-java`)
+
+lazy val kotlinpc = project
+  .in(file("tests/kotlinpc"))
+  .settings(
+    testSettings,
+    sharedSettings,
+    scalaVersion := V.scala213,
+    crossScalaVersions := Seq(V.scala213),
+  )
+  .dependsOn(mtest, `mtags-kotlin`)
 
 lazy val protopc = project
   .in(file("tests/protopc"))
