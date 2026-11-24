@@ -190,6 +190,38 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
     } yield ()
   }
 
+  test("glob-search-waits-for-first-connect") {
+    cleanWorkspace()
+    val firstConnect = Promise[Unit]()
+    for {
+      _ <- initialize(
+        """|/src/Hello.java
+           |class Hello {}
+           |""".stripMargin,
+        expectError = true,
+      )
+      client <- startMcpServer()
+      // Startup state: first connect pending, no connect request queued yet.
+      _ = server.headServer.connectionProvider.buildServerPromise = firstConnect
+      searchResult = client.globSearchWithProgress("Hello", "progress-token")
+      firstEvent <- Future.firstCompletedOf(
+        List(
+          client.firstProgressNotification.map(Some(_)),
+          searchResult.map(_ => None),
+        )
+      )
+      _ = assert(
+        firstEvent.isDefined,
+        "Expected a progress ping before the tool result",
+      )
+      _ <- server.headServer.connectionProvider.index(() => ())
+      _ = firstConnect.success(())
+      result <- searchResult
+      _ = assertNoDiff(result, "No symbols found.")
+      _ <- client.shutdown()
+    } yield ()
+  }
+
   test("compile-full-waits-for-import") {
     cleanWorkspace()
     val releaseImport = Promise[Unit]()

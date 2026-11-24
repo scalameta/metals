@@ -1289,17 +1289,21 @@ trait MetalsMcpTools extends Cancelable {
         if (indexingPromise.isCompleted) handler(exchange, request)
         else errorResult("No build imported yet. Run `import-build` first.")
       }
+      // Until the first connect finishes, its request may not be queued yet.
+      val firstConnect = connectionProvider.buildServerPromise
       val runningImport =
         if (indexingPromise.isCompleted) None
-        else connectionProvider.Connect.getOngoingRequest()
+        else if (!firstConnect.isCompleted) Some(firstConnect.future)
+        else
+          connectionProvider.Connect
+            .getOngoingRequest()
+            .map(_.promise.future)
       runningImport match {
         case None => runIfImported
-        case Some(connectRequest) =>
+        case Some(importFuture) =>
           // The request also compiles open files after indexing.
           val importDone = Future
-            .firstCompletedOf(
-              List(indexingPromise.future, connectRequest.promise.future)
-            )
+            .firstCompletedOf(List(indexingPromise.future, importFuture))
             .transform(_ => Success(()))
             .toMono
           val waiting = Option(request.progressToken()) match {
