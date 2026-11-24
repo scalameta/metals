@@ -330,11 +330,11 @@ class TurbineCompiler[T](
       underlying: StandardJavaFileManager,
       projectClasspathJars: ju.List[Path],
   ): JavaFileManager = {
-    val isGlobalClasspathEntry = this.classpath().toSet
+    // Global inputs need not be present in the latest Turbine result yet.
+    // Keep target jars here so they remain available and take precedence over
+    // stale global results. The file manager de-duplicates binary names.
     val projectClasspathEntries =
-      projectClasspathJars.asScala.filter(file =>
-        !isGlobalClasspathEntry(file) && TurbineCompiler.isJarFile(file)
-      )
+      projectClasspathJars.asScala.filter(TurbineCompiler.isJarFile)
     val projectClasspath =
       ClassPathBinder.bindClasspath(projectClasspathEntries.asJava)
     onNewProjectClasspath(projectClasspath)
