@@ -47,7 +47,9 @@ class SemanticdbTextDocumentProvider(
 
     val explicitDialect = if (filePath.isSbt) {
       Some(dialects.Sbt1)
-    } else if (filePath.isMill || filePath.isScalaScript) {
+    } else if (
+      filePath.isMill || filePath.isScalaScript || filePath.isWorksheet
+    ) {
       Some(dialects.Scala213.withAllowToplevelTerms(true))
     } else {
       None
