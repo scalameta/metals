@@ -4,6 +4,7 @@ import scala.annotation.nowarn
 import scala.concurrent.Future
 
 import scala.meta.internal.bsp.BspConfigGenerationStatus.*
+import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.StatusBar
@@ -30,7 +31,8 @@ trait BuildServerProvider extends BuildTool {
       CancelableFuture(
         Future.successful(
           Failed(Right(Messages.NoBspSupport.toString()))
-        )
+        ),
+        Cancelable.empty,
       )
     }
 
