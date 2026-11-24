@@ -33,14 +33,14 @@ class DiagnosticsSuite extends BasePCSuite {
          |  val a: Int = ""
          |}""".stripMargin
     assertNoDiff(diagnostics(uri, code), StringNotInt)
-    assertNoDiff(diagnostics(uri, code), "")
+    assertNoDiff(diagnostics(uri, code), StringNotInt)
   }
 
   test("built-twice-worksheet") {
     val uri = URI.create("file:/Twice.worksheet.sc")
     val code = "val a: Int = \"\""
     assertNoDiff(diagnostics(uri, code), ScriptStringNotInt)
-    assertNoDiff(diagnostics(uri, code), "")
+    assertNoDiff(diagnostics(uri, code), ScriptStringNotInt)
   }
 
   test("after-hover") {
@@ -52,7 +52,7 @@ class DiagnosticsSuite extends BasePCSuite {
     presentationCompiler
       .hover(CompilerOffsetParams(uri, code, code.indexOf("a:")))
       .get()
-    assertNoDiff(diagnostics(uri, code), "")
+    assertNoDiff(diagnostics(uri, code), StringNotInt)
   }
 
   test("after-hover-worksheet") {
@@ -61,7 +61,7 @@ class DiagnosticsSuite extends BasePCSuite {
     presentationCompiler
       .hover(CompilerOffsetParams(uri, code, code.indexOf("a:")))
       .get()
-    assertNoDiff(diagnostics(uri, code), "")
+    assertNoDiff(diagnostics(uri, code), ScriptStringNotInt)
   }
 
   test("after-document") {
@@ -71,7 +71,7 @@ class DiagnosticsSuite extends BasePCSuite {
          |  val a: Int = ""
          |}""".stripMargin
     presentationCompiler.semanticdbTextDocument(uri, code).get()
-    assertNoDiff(diagnostics(uri, code), "")
+    assertNoDiff(diagnostics(uri, code), StringNotInt)
   }
 
   test("after-edit") {

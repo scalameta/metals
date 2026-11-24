@@ -16,6 +16,7 @@ object DiagnosticsProvider {
     val unit = addCompilationUnit(
       params.text(),
       params.uri().toString(),
+      forceNew = true, // scalac does not report messages of a typed unit again
       cursor = None
     )
 

@@ -68,7 +68,7 @@ class PcSemanticdbSuite extends BasePCSuite {
          |  val a: Int = ""
          |}""".stripMargin
     assertNoDiff(diagnostics(uri, code), StringNotInt)
-    assertNoDiff(diagnostics(uri, code), "")
+    assertNoDiff(diagnostics(uri, code), StringNotInt)
   }
 
   test("diagnostics-built-twice-worksheet") {
@@ -88,7 +88,7 @@ class PcSemanticdbSuite extends BasePCSuite {
     presentationCompiler
       .hover(CompilerOffsetParams(uri, code, code.indexOf("a:")))
       .get()
-    assertNoDiff(diagnostics(uri, code), "")
+    assertNoDiff(diagnostics(uri, code), StringNotInt)
   }
 
   test("diagnostics-after-edit") {
