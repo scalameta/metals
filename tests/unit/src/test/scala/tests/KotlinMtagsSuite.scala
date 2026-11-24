@@ -13,9 +13,10 @@ class KotlinMtagsSuite extends munit.FunSuite {
       code: String,
       includeMembers: Boolean = true,
       includeFuzzyReferences: Boolean = false,
+      path: String = "A.kt",
   ): KotlinMtags =
     new KotlinMtags(
-      Input.VirtualFile("A.kt", code),
+      Input.VirtualFile(path, code),
       includeMembers,
       includeFuzzyReferences,
     )(FailOnReport)
@@ -98,7 +99,92 @@ class KotlinMtagsSuite extends munit.FunSuite {
     ).index()
     assertEquals(
       symbols(doc, s.SymbolOccurrence.Role.DEFINITION),
-      List("a/C#", "a/topLevel().", "a/property.", "a/getProperty()."),
+      List("a/C#", "a/AKt#", "a/topLevel().", "a/AKt#topLevel().",
+        "a/property.", "a/getProperty().", "a/AKt#property.",
+        "a/AKt#getProperty()."),
+    )
+  }
+
+  private def facadeSymbols(code: String, path: String = "A.kt"): List[String] =
+    symbols(
+      mtags(code, includeMembers = false, path = path).index(),
+      s.SymbolOccurrence.Role.DEFINITION,
+    ).filter(_.contains("#"))
+
+  test("facade-overloads-and-setter") {
+    assertEquals(
+      facadeSymbols(
+        """|package a
+           |class C
+           |typealias T = Int
+           |fun f() = 1
+           |fun f(x: Int) = x
+           |var isOn = true
+           |""".stripMargin
+      ),
+      List("a/C#", "a/T#", "a/AKt#", "a/AKt#f().", "a/AKt#f(+1).",
+        "a/AKt#isOn.", "a/AKt#isOn().", "a/AKt#setOn()."),
+    )
+  }
+
+  test("facade-only-with-callables") {
+    assertEquals(facadeSymbols("package a\nclass C\n"), List("a/C#"))
+    assertEquals(
+      facadeSymbols("package a\nclass C\nfun f() = 1\n"),
+      List("a/C#", "a/AKt#", "a/AKt#f()."),
+    )
+  }
+
+  test("facade-file-name") {
+    assertEquals(
+      facadeSymbols("fun f() = 1\n", path = "/src/my-utils.kt"),
+      List("_empty_/My_utilsKt#", "_empty_/My_utilsKt#f()."),
+    )
+    assertEquals(
+      facadeSymbols("fun f() = 1\n", path = "/src/1.kt"),
+      List("_empty_/_1Kt#", "_empty_/_1Kt#f()."),
+    )
+    // The Kotlin compiler upper-cases `ß` to `SS`.
+    assertEquals(
+      facadeSymbols("fun f() = 1\n", path = "/src/ßeta.kt"),
+      List("_empty_/SSetaKt#", "_empty_/SSetaKt#f()."),
+    )
+  }
+
+  test("facade-jvm-name") {
+    assertEquals(
+      facadeSymbols(
+        """|@file:JvmMultifileClass
+           |@file:JvmName("Utils")
+           |package a
+           |fun f() = 1
+           |""".stripMargin
+      ),
+      List("a/Utils#", "a/Utils#f()."),
+    )
+  }
+
+  test("facade-jvm-name-qualified-and-named") {
+    assertEquals(
+      facadeSymbols(
+        """|@file:kotlin.jvm.JvmName(name = "Utils")
+           |package a
+           |fun f() = 1
+           |""".stripMargin
+      ),
+      List("a/Utils#", "a/Utils#f()."),
+    )
+  }
+
+  test("facade-jvm-name-in-brackets") {
+    assertEquals(
+      facadeSymbols(
+        """|@file:[JvmMultifileClass JvmName("Utils")]
+           |package a
+           |fun f() = 1
+           |""".stripMargin
+      ),
+      List("a/Utils#", "a/Utils#f()."),
     )
   }
 
@@ -114,13 +200,14 @@ class KotlinMtagsSuite extends munit.FunSuite {
     ).index()
     assertEquals(
       symbols(doc, s.SymbolOccurrence.Role.DEFINITION),
-      List("a/Before#", "a/Before#`<init>`().", "a/broken()."),
+      List("a/Before#", "a/Before#`<init>`().", "a/AKt#", "a/broken().",
+        "a/AKt#broken()."),
     )
   }
 
   private def definitions(code: String): List[String] =
     symbols(mtags(code).index(), s.SymbolOccurrence.Role.DEFINITION)
-      .filterNot(sym => sym.endsWith("/"))
+      .filterNot(sym => sym.endsWith("/") || sym.contains("/AKt#"))
 
   test("generic-type-alias-then-class") {
     assertEquals(

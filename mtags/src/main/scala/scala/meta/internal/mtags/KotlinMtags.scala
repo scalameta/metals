@@ -1,6 +1,7 @@
 package scala.meta.internal.mtags
 
 import java.nio.file.Paths
+import java.util.Locale
 import java.util.Optional
 
 import scala.annotation.tailrec
@@ -25,13 +26,17 @@ import scala.meta.pc.reports.ReportContext
  * Symbols follow the format of `semanticdb-kotlinc`: top-level functions and
  * properties are owned by the package, objects and companion objects are
  * types (`Name#`), and a property also defines its JVM getter and setter.
+ * With `includeJvmFacade`, top-level functions and properties are also
+ * emitted as members of the JVM facade class (`pkg/FileKt#` or the
+ * `@file:JvmName`), the symbols that Java and Scala callers use.
  * Function bodies and initializers are skipped, but their identifiers still
  * become fuzzy references when `includeFuzzyReferences` is set.
  */
 class KotlinMtags(
     val input: Input.VirtualFile,
     includeMembers: Boolean,
-    includeFuzzyReferences: Boolean = false
+    includeFuzzyReferences: Boolean = false,
+    includeJvmFacade: Boolean = true
 )(implicit rc: ReportContext)
     extends MtagsIndexer {
   import KotlinMtags._
@@ -157,6 +162,34 @@ class KotlinMtags(
   private def emit[A](region: Region)(thunk: => A): A =
     withOwner(region.owner)(thunk)
 
+  private var facadeName: String = {
+    val file = input.path.substring(
+      math.max(input.path.lastIndexOf('/'), input.path.lastIndexOf('\\')) + 1
+    )
+    // The rule of the Kotlin compiler, see `NameUtils.getPackagePartClassNamePrefix`.
+    val name = file.stripSuffix(".kt").replaceAll("[^\\p{L}\\p{Digit}]", "_")
+    val prefix =
+      if (name.nonEmpty && Character.isJavaIdentifierStart(name.charAt(0)))
+        name.substring(0, 1).toUpperCase(Locale.ROOT) + name.substring(1)
+      else "_" + name
+    prefix + "Kt"
+  }
+  private var facade: Region = null
+
+  /** The region itself and, for a top-level region, the JVM facade class. */
+  private def withFacade(region: Region, at: Position): List[Region] =
+    if (region.isTopLevel && includeJvmFacade) {
+      if (facade == null) {
+        val props = Property.FINAL.value | Property.STATIC.value
+        val cls = emit(region)(tpe(facadeName, at, Kind.CLASS, props))
+        facade = new Region(cls, isTopLevel = false)
+      }
+      List(region, facade)
+    } else List(region)
+
+  private def staticIn(region: Region): Int =
+    if (region eq facade) Property.STATIC.value else 0
+
   // ---------------------------------------------------------------- parser
 
   private def parseFile(): Unit = {
@@ -164,9 +197,13 @@ class KotlinMtags(
     @tailrec
     def header(): Unit = {
       peek() match {
-        case Token.Sym('@', _) =>
+        case at @ Token.Sym('@', _) =>
           next()
           skipAnnotation()
+          val annotation = text.substring(at.start, startOf(peek()))
+          FileJvmName.findFirstMatchIn(annotation).foreach { m =>
+            facadeName = m.group(1)
+          }
           header()
         case Token.Keyword("package", _) =>
           next()
@@ -516,9 +553,10 @@ class KotlinMtags(
     if (isSym(peek(), '<')) { next(); skipBalanced('<', '>') }
     val name = readReceiverAndName()
     name.foreach { id =>
-      emit(region)(
-        method(id.name, region.overloads.disambiguator(id.name), pos(id), 0)
-      )
+      for (r <- withFacade(region, pos(id))) {
+        val disambiguator = r.overloads.disambiguator(id.name)
+        emit(r)(method(id.name, disambiguator, pos(id), staticIn(r)))
+      }
     }
     if (isSym(peek(), '(')) { next(); skipBalanced('(', ')') }
     skipHeader()
@@ -568,17 +606,16 @@ class KotlinMtags(
       isVar: Boolean
   ): Unit = {
     val props = if (isVar) Property.VAR.value else Property.VAL.value
-    emit(region)(term(name, at, Kind.METHOD, props))
-    // An annotation parameter is a JVM method with the parameter's name.
-    val getter = if (region.isAnnotation) name else getterName(name)
-    emit(region)(
-      method(getter, region.overloads.disambiguator(getter), at, 0)
-    )
-    if (isVar) {
-      val setter = setterName(name)
-      emit(region)(
-        method(setter, region.overloads.disambiguator(setter), at, 0)
-      )
+    for (r <- withFacade(region, at)) {
+      val static = staticIn(r)
+      emit(r)(term(name, at, Kind.METHOD, props | static))
+      // An annotation parameter is a JVM method with the parameter's name.
+      val getter = if (r.isAnnotation) name else getterName(name)
+      emit(r)(method(getter, r.overloads.disambiguator(getter), at, static))
+      if (isVar) {
+        val setter = setterName(name)
+        emit(r)(method(setter, r.overloads.disambiguator(setter), at, static))
+      }
     }
   }
 
@@ -862,6 +899,10 @@ object KotlinMtags {
 
   private val Constructor = "<init>"
 
+  // `@file:JvmName("X")`, also qualified, with `name =`, or in `@file:[...]`.
+  private val FileJvmName =
+    """^@\s*file\s*:[\s\S]*?\bJvmName\s*\(\s*(?:name\s*=\s*)?"([^"\\]+)"""".r
+
   // An identifier can be a term or a type, so it references all three forms.
   private val ReferenceSuffixes = Array("().", ".", "#")
 
@@ -894,6 +935,10 @@ object KotlinMtags {
   // nullable types (`String?`) or `!!`.
   private val ContinuationSymbols =
     Set('=', '.', ',', '(', '[', ':', '+', '-', '*', '/', '%', '&', '|')
+
+  /** Only facade symbols get the `STATIC` property from this indexer. */
+  def isJvmFacade(info: s.SymbolInformation): Boolean =
+    (info.properties & Property.STATIC.value) != 0
 
   def getterName(name: String): String =
     if (isBooleanPrefix(name)) name else "get" + name.capitalize

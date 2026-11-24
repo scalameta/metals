@@ -85,7 +85,10 @@
    }
 
    val listener = object : Runnable {
+//     ^^^^^^^^ definition example/members/MembersKt# CLASS(final, static)
 //     ^^^^^^^^ definition example/members/listener. METHOD(val)
 //     ^^^^^^^^ definition example/members/getListener(). METHOD
+//     ^^^^^^^^ definition example/members/MembersKt#listener. METHOD(val, static)
+//     ^^^^^^^^ definition example/members/MembersKt#getListener(). METHOD(static)
        override fun run() {}
    }
