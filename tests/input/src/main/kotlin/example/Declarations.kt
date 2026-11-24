@@ -3,7 +3,7 @@ package example
 import java.io.Closeable
 import kotlin.collections.List as KList
 
-data class User(val name: String, var age: Int = 0, nickname: String? = null)
+class User(val name: String, var age: Int = 0, nickname: String? = null)
 
 open class Base(val id: Long)
 

@@ -12,7 +12,7 @@ import scala.meta.internal.mtags.SemanticdbPrinter
  *
  * To update the expect files:
  * {{{
- * coursier launch sbt -- --client "unit/Test/runMain tests.SaveExpect KotlinMtagsExpectSuite"
+ * coursier launch sbt -- --client "unit/Test/runMain tests.SaveExpect mtags-kotlin"
  * }}}
  */
 class KotlinMtagsExpectSuite extends DirectoryExpectSuite("mtags-kotlin") {

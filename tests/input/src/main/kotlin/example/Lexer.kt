@@ -4,7 +4,9 @@ package example.lexer
 
 // fun hiddenInLineComment()
 
-val template = "value: ${listOf("a", "b").joinToString { "[$it]" }} and $template"
+val number = 1_000_000L + 0x1F + 1.5e3.toLong()
+
+val template = "value: ${listOf("a", "b").joinToString { "[$it]" }} and $number"
 
 val raw = """
     fun hiddenInRawString() {
@@ -14,8 +16,6 @@ val raw = """
 val quotes = """ends with a quote""""
 
 val chars = listOf('{', '}', '"', '\'', 'A')
-
-val number = 1_000_000L + 0x1F + 1.5e3.toLong()
 
 class AfterStrings {
     fun visible() = "}"

@@ -6,7 +6,11 @@
 
    // fun hiddenInLineComment()
 
-   val template = "value: ${listOf("a", "b").joinToString { "[$it]" }} and $template"
+   val number = 1_000_000L + 0x1F + 1.5e3.toLong()
+//     ^^^^^^ definition example/lexer/number. METHOD(val)
+//     ^^^^^^ definition example/lexer/getNumber(). METHOD
+
+   val template = "value: ${listOf("a", "b").joinToString { "[$it]" }} and $number"
 //     ^^^^^^^^ definition example/lexer/template. METHOD(val)
 //     ^^^^^^^^ definition example/lexer/getTemplate(). METHOD
 
@@ -24,10 +28,6 @@
    val chars = listOf('{', '}', '"', '\'', 'A')
 //     ^^^^^ definition example/lexer/chars. METHOD(val)
 //     ^^^^^ definition example/lexer/getChars(). METHOD
-
-   val number = 1_000_000L + 0x1F + 1.5e3.toLong()
-//     ^^^^^^ definition example/lexer/number. METHOD(val)
-//     ^^^^^^ definition example/lexer/getNumber(). METHOD
 
    class AfterStrings {
 //       ^^^^^^^^^^^^ definition example/lexer/AfterStrings# CLASS(final)

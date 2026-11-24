@@ -4,14 +4,14 @@
    import java.io.Closeable
    import kotlin.collections.List as KList
 
-   data class User(val name: String, var age: Int = 0, nickname: String? = null)
-//            ^^^^ definition example/User# CLASS(final)
-//            ^^^^ definition example/User#`<init>`(). CONSTRUCTOR
-//                     ^^^^ definition example/User#name. METHOD(val)
-//                     ^^^^ definition example/User#getName(). METHOD
-//                                       ^^^ definition example/User#age. METHOD(var)
-//                                       ^^^ definition example/User#getAge(). METHOD
-//                                       ^^^ definition example/User#setAge(). METHOD
+   class User(val name: String, var age: Int = 0, nickname: String? = null)
+//       ^^^^ definition example/User# CLASS(final)
+//       ^^^^ definition example/User#`<init>`(). CONSTRUCTOR
+//                ^^^^ definition example/User#name. METHOD(val)
+//                ^^^^ definition example/User#getName(). METHOD
+//                                  ^^^ definition example/User#age. METHOD(var)
+//                                  ^^^ definition example/User#getAge(). METHOD
+//                                  ^^^ definition example/User#setAge(). METHOD
 
    open class Base(val id: Long)
 //            ^^^^ definition example/Base# CLASS
