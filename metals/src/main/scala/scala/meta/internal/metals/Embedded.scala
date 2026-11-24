@@ -171,11 +171,13 @@ final class Embedded(
       scalaBinaryVersion: String,
       scalaVersion: Option[String],
   ): URLClassLoader = {
+    import Embedded.XtensionResolutionParams
+
     /* note(@tgodzik) we add an exclusion so that the mdoc classlaoder does not try to
      * load coursierapi.Logger and instead will use the already loaded one
      */
-    val resolutionParams = ResolutionParams().withExclusions(
-      Set((Organization("io.get-coursier"), ModuleName("interface")))
+    val resolutionParams = ResolutionParams().addExclusions(
+      (Organization("io.get-coursier"), ModuleName("interface"))
     )
 
     /**
@@ -191,7 +193,7 @@ final class Embedded(
     val fullResolution = scalaVersion match {
       case None => resolutionParams
       case Some(version) =>
-        resolutionParams.withForceVersion0(
+        resolutionParams.withForcedVersions(
           Embedded.scala3CompilerDependencies(version)
         )
     }
@@ -280,6 +282,23 @@ object Embedded {
   private def credentials(auth: Authentication): coursierapi.Credentials =
     coursierapi.Credentials.of(auth.user, auth.passwordOpt.getOrElse(""))
 
+  private[Embedded] implicit final class XtensionResolutionParams(
+      private val params: ResolutionParams
+  ) extends AnyVal {
+
+    /**
+     * `ResolutionParams.withForceVersion0` is missing from the Scala 3 artifact
+     * of coursier, while `withForceVersion` exists in both and replaces the
+     * forced versions in the same way.
+     */
+    def withForcedVersions(
+        versions: Map[coursier.Module, VersionConstraint]
+    ): ResolutionParams =
+      params.withForceVersion(versions.map { case (module, version) =>
+        module -> version.asString
+      })
+  }
+
   private[Embedded] def scala3CompilerDependencies(version: String) = List(
     dependencyOf(
       "org.scala-lang",
@@ -319,7 +338,7 @@ object Embedded {
       .flatMap { scalaVersion =>
         val resolution =
           if (!ScalaVersions.isScala3Version(scalaVersion))
-            resolutionParams.withForceVersion0(
+            resolutionParams.withForcedVersions(
               List(
                 scalaLibraryDependency(scalaVersion),
                 dependencyOf(
@@ -335,11 +354,11 @@ object Embedded {
               ).map(d => (d.module, d.versionConstraint)).toMap
             )
           else
-            resolutionParams.withForceVersion0(
+            resolutionParams.withForcedVersions(
               scala3CompilerDependencies(scalaVersion)
             )
         mtagsInterfaceOverride.get(scalaVersion).map { overrideVersion =>
-          resolution.withForceVersion0(
+          resolution.withForcedVersions(
             Map(
               coursier.Module(
                 Organization("org.scalameta"),

@@ -75,9 +75,10 @@ class GradleRepositoriesTest extends BaseSuite {
       GradleRepositoriesTest.google.withAuthentication(
         Some(Authentication("testUser", "testPassword"))
       ),
-      GradleRepositoriesTest
-        .bintrayIvy("testId")
-        .withAuthentication(Some(Authentication("testUser", "testPassword"))),
+      GradleRepositoriesTest.bintrayIvy(
+        "testId",
+        Some(Authentication("testUser", "testPassword")),
+      ),
     ),
     """|  repositories {
        |    mavenCentral()
@@ -119,11 +120,15 @@ object GradleRepositoriesTest {
     "[organisation]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]"
   def google: MavenRepository =
     MavenRepository("https://maven.google.com")
-  def bintrayIvy(id: String): IvyRepository =
+  def bintrayIvy(
+      id: String,
+      authentication: Option[Authentication] = None,
+  ): IvyRepository =
     IvyRepository
       .parse(
         s"https://dl.bintray.com/${id.stripSuffix("/")}/" +
-          defaultIvyPattern
+          defaultIvyPattern,
+        authentication = authentication,
       )
       .right
       .get
