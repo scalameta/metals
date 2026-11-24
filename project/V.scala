@@ -23,13 +23,13 @@ object V {
 
   val betterMonadicFor = "0.3.1"
 
-  val bloop = "2.1.2"
+  val bloop = "2.1.3"
 
   val bloopConfig = "2.3.3"
 
   val bsp = "2.2.0-M2"
 
-  val coursier = "2.1.25-M26"
+  val coursier = "2.1.26"
   // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
 
