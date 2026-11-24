@@ -237,9 +237,12 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
   }
 
   test("completion-qualified-skips-extension") {
+    val decls = "fun String.shout() = 1\nfun shoutAll() = 1\n"
+    syncWith(main + decls, model)
     val text =
-      main.replace("  val sb", "  val l = kotlin.text.substringB@@\n  val sb")
-    assertEquals(completions(text), Nil)
+      main.replace("  val sb", "  demo.shou@@\n  val sb") + decls
+    try assertEquals(completions(text), List("shoutAll"))
+    finally syncWith(main, model)
   }
 
   test("completion-scope") {
