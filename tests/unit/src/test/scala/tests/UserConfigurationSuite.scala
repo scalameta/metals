@@ -341,24 +341,30 @@ class UserConfigurationSuite extends BaseSuite {
     }
 
     // Assert that feature flag overrides when there is no custom setting
-    val Right(obtained) = UserConfiguration.fromJson(
-      UserConfiguration.parse("{}"),
-      ClientConfiguration.default,
-      featureFlags = alwaysEnableMbtFeatureFlag,
-    )
+    val obtained = UserConfiguration
+      .fromJson(
+        UserConfiguration.parse("{}"),
+        ClientConfiguration.default,
+        featureFlags = alwaysEnableMbtFeatureFlag,
+      )
+      .toOption
+      .get
     assertEquals(
       obtained.workspaceSymbolProvider,
       WorkspaceSymbolProviderConfig.MBT,
     )
 
     // Assert that a custom "bsp" setting overrides the feature flag
-    val Right(obtained2) = UserConfiguration.fromJson(
-      UserConfiguration.parse("""{
-                                |  "workspaceSymbolProvider": "bsp"
-                                |}""".stripMargin),
-      ClientConfiguration.default,
-      featureFlags = alwaysEnableMbtFeatureFlag,
-    )
+    val obtained2 = UserConfiguration
+      .fromJson(
+        UserConfiguration.parse("""{
+                                  |  "workspaceSymbolProvider": "bsp"
+                                  |}""".stripMargin),
+        ClientConfiguration.default,
+        featureFlags = alwaysEnableMbtFeatureFlag,
+      )
+      .toOption
+      .get
     assertEquals(
       obtained2.workspaceSymbolProvider,
       WorkspaceSymbolProviderConfig.BSP,

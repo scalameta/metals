@@ -137,12 +137,10 @@ class ScalaCliServers(
                   AbsolutePath(
                     Files.createTempDirectory(s"metals-scala-cli")
                   )
-                val Some(workspace) =
-                  scalaCliBuildDirectory.updateAndGet {
-                    case None => Some(tmpFile)
-                    case some => some
-                  }
-                workspace
+                scalaCliBuildDirectory.updateAndGet {
+                  case None => Some(tmpFile)
+                  case some => some
+                }.get
             }
 
           // When path and workspace have different roots on Windows `scala-cli` throws an error,
