@@ -111,6 +111,14 @@ final case class CallHierarchyProvider(
         params.getItem.getSelectionRange.getStart,
       )
       .getOrElse(List())
+    incomingCalls(params, parents, token)
+  }
+
+  private def incomingCalls(
+      params: CallHierarchyIncomingCallsParams,
+      parents: List[String],
+      token: CancelToken,
+  )(implicit ec: ExecutionContext): Future[List[CallHierarchyIncomingCall]] = {
     val info =
       getInfo(params.getItem.getData).withVisitedSymbols(parents.toArray)
     def getIncomingCallsInSpecifiedSource(
