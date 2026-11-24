@@ -60,12 +60,15 @@ class Supermethods(
         )
     }
 
-    (for {
-      filePath <- commandParams.getTextDocument.getUri.toAbsolutePathSafe
-      methodsHierarchy <- getSuperMethodHierarchySymbols(commandParams)
-      if methodsHierarchy.nonEmpty
-    } yield execute(methodsHierarchy, filePath))
-      .getOrElse(Future.successful(()))
+    commandParams.getTextDocument.getUri.toAbsolutePathSafe match {
+      case Some(filePath) =>
+        getSuperMethodHierarchySymbols(commandParams) match {
+          case Some(methodsHierarchy) if methodsHierarchy.nonEmpty =>
+            execute(methodsHierarchy, filePath)
+          case _ => Future.unit
+        }
+      case _ => Future.unit
+    }
   }
 
   def getGoToSuperMethodLocation(
@@ -128,17 +131,14 @@ class Supermethods(
   ): Option[List[String]] = {
     for {
       filePath <- path.toAbsolutePathSafe
-      (symbolOcc, textDocument) <- definitionProvider.symbolOccurrence(
-        filePath,
-        position,
-      )
-      findSymbol = symbolHierarchyOps.defaultSymbolSearch(
-        filePath,
-        textDocument,
-      )
-      symbolInformation <- findSymbol(symbolOcc.symbol)
+      case (symbolOcc, textDocument) <-
+        definitionProvider.symbolOccurrence(filePath, position)
+      symbol = symbolOcc.symbol
+      // the global symbol table records no overridden symbols
+      symbolInformation <-
+        symbolHierarchyOps.semanticdbSymbolSearch(textDocument, symbol)
     } yield SuperMethodProvider.getSuperMethodHierarchy(
-      symbolInformation
+      symbolInformation.overriddenSymbols
     )
   }
 
