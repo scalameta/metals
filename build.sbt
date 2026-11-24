@@ -1087,7 +1087,7 @@ lazy val kotlinpc = project
     scalaVersion := V.scala213,
     crossScalaVersions := Seq(V.scala213),
   )
-  // `mtags` is for KotlinMtagsReferenceSuite.
+  // `mtags` is for KotlinMtagsLibrarySuite.
   .dependsOn(mtest, `mtags-kotlin`, mtags % Test)
 
 lazy val protopc = project

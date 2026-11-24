@@ -135,9 +135,4 @@ A top-level function or property is also a static member of its JVM facade class
 
 `KotlinMtagsSuite.scala` and the expect files in `tests/unit/src/test/resources/mtags-kotlin` show which symbols `KotlinMtags` extracts. The symbol format was compared with `semanticdb-kotlinc` 0.6.0 on the Kotlin compiler 2.2.0.
 
-### Checking KotlinMtags
-
-`KotlinMtagsReferenceSuite` in `tests/kotlinpc` compares `KotlinMtags` with two references. CI runs it with `sbt kotlinpc/test`.
-
-- `stdlib-declarations-match-the-kotlin-parser` parses the sources of the Kotlin standard library with the Kotlin parser of `analysis-kotlin-symbols`, makes the expected symbols with the rules above, and compares them with the symbols of `KotlinMtags`. It compares the name and the line of each symbol other than constructors, with the overload suffix removed. It uses the version of `kotlin-stdlib` on the test classpath and prints that version and the number of files and symbols.
-- `symbol-format-matches-semanticdb-kotlinc` compiles a sample file with `semanticdb-kotlinc` 0.6.0 on the Kotlin compiler 2.2.0. The differences must be the ones that this section describes.
+`KotlinMtagsLibrarySuite` in `tests/kotlinpc` compares the symbols of `KotlinMtags` with the declarations that the Kotlin parser finds in the sources of `kotlin-stdlib`.
