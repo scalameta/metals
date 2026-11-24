@@ -74,10 +74,9 @@ class Supermethods(
 
     commandParams.getTextDocument.getUri.toAbsolutePathSafe match {
       case Some(filePath) =>
-        getSuperMethodHierarchySymbols(commandParams) match {
-          case Some(methodsHierarchy) if methodsHierarchy.nonEmpty =>
-            execute(methodsHierarchy, filePath)
-          case _ => Future.unit
+        getSuperMethodHierarchySymbols(commandParams).flatMap {
+          case Nil => Future.unit
+          case methodsHierarchy => execute(methodsHierarchy, filePath)
         }
       case _ => Future.unit
     }
@@ -141,7 +140,7 @@ class Supermethods(
 
   def getSuperMethodHierarchySymbols(
       params: TextDocumentPositionParams
-  ): Option[List[String]] =
+  ): Future[List[String]] =
     getSuperMethodHierarchySymbols(
       params.getTextDocument.getUri,
       params.getPosition,
@@ -150,18 +149,23 @@ class Supermethods(
   def getSuperMethodHierarchySymbols(
       path: String,
       position: Position,
-  ): Option[List[String]] = {
-    for {
+  ): Future[List[String]] = {
+    val empty = List.empty[String]
+    (for {
       filePath <- path.toAbsolutePathSafe
       case (symbolOcc, textDocument) <-
         definitionProvider.symbolOccurrence(filePath, position)
       symbol = symbolOcc.symbol
       // the global symbol table records no overridden symbols
-      symbolInformation <-
+      symbolInformation =
         symbolHierarchyOps.semanticdbSymbolSearch(textDocument, symbol)
-    } yield SuperMethodProvider.getSuperMethodHierarchy(
-      symbolInformation.overriddenSymbols
-    )
+    } yield symbolInformation match {
+      case Some(info) =>
+        Future.successful(
+          SuperMethodProvider.getSuperMethodHierarchy(info.overriddenSymbols)
+        )
+      case _ => Future.successful(empty)
+    }).getOrElse(Future.successful(empty))
   }
 
   private def findSuperMethodSymbol(
