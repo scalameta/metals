@@ -331,7 +331,7 @@ abstract class MetalsLspService(
     clientConfig,
   )
 
-  protected def semanticdbs(): Semanticdbs
+  protected def semanticdbs: Semanticdbs
 
   protected val connectionBspStatus =
     new ConnectionBspStatus(
@@ -395,7 +395,7 @@ abstract class MetalsLspService(
     () => mtags,
     buffers,
     definitionIndex,
-    semanticdbs,
+    () => semanticdbs,
     () => compilers,
     trees,
     buildTargets,
@@ -419,7 +419,7 @@ abstract class MetalsLspService(
     buildTargetClasses,
     trees,
     definitionIndex,
-    semanticdbs,
+    () => semanticdbs,
     buffers,
     clientConfig,
     () => userConfig,
@@ -464,7 +464,7 @@ abstract class MetalsLspService(
         testProvider,
         gotoTestLensProvider,
       ),
-      semanticdbs,
+      () => semanticdbs,
       stacktraceAnalyzer,
     )
   }
@@ -523,7 +523,7 @@ abstract class MetalsLspService(
   )
 
   val gotoTestProvider: GotoTestProvider = new GotoTestProvider(
-    () => semanticdbs(),
+    () => semanticdbs,
     symbolSearch,
     workspaceSymbols,
     languageClient,
@@ -594,7 +594,7 @@ abstract class MetalsLspService(
     mbtSymbolSearch,
     compilers,
     buffers,
-    semanticdbs,
+    () => semanticdbs,
     buildTargets,
     time,
     languageClient,
@@ -606,7 +606,7 @@ abstract class MetalsLspService(
 
   val referencesProvider: ReferenceProvider = new ReferenceProvider(
     folder,
-    semanticdbs,
+    () => semanticdbs,
     buffers,
     definitionProvider,
     trees,
@@ -651,7 +651,7 @@ abstract class MetalsLspService(
 
   val implementationProvider: ImplementationProvider =
     new ImplementationProvider(
-      semanticdbs,
+      () => semanticdbs,
       folder,
       buffers,
       definitionProvider,
@@ -665,7 +665,7 @@ abstract class MetalsLspService(
     new SymbolHierarchyOps(
       folder,
       buildTargets,
-      semanticdbs,
+      () => semanticdbs,
       definitionIndex,
       scalaVersionSelector,
       buffers,
@@ -722,7 +722,7 @@ abstract class MetalsLspService(
 
   protected val typeHierarchyProvider: TypeHierarchyProvider =
     new TypeHierarchyProvider(
-      semanticdbs,
+      () => semanticdbs,
       definitionProvider,
       implementationProvider,
       Some(mbtReferenceProvider),
@@ -2354,7 +2354,7 @@ abstract class MetalsLspService(
     val source = positionParams.getTextDocument.getUri.toAbsolutePath
     if (source.isScalaFilename || source.isJavaFilename) {
       val semanticDBDoc =
-        semanticdbs().textDocument(source).documentIncludingStale
+        semanticdbs.textDocument(source).documentIncludingStale
       (for {
         doc <- semanticDBDoc
         positionOccurrence = definitionProvider.positionOccurrence(
