@@ -1,15 +1,9 @@
 package tests
 
-import scala.concurrent.Future
+import scala.meta.internal.metals.{BuildInfo => V}
 
-import scala.meta.internal.metals.InitializationOptions
-
-import org.eclipse.lsp4j.Position
-
-class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
-
-  override protected def initializationOptions: Option[InitializationOptions] =
-    Some(TestingServer.TestDefault)
+class SuperHierarchyLspSuite
+    extends BaseSuperHierarchySuite("super-method-hierarchy") {
 
   test("simple") {
     val code =
@@ -102,71 +96,204 @@ class SuperHierarchyLspSuite extends BaseLspSuite("super-method-hierarchy") {
     )
   }
 
-  private def checkHierarchy(
-      code: String,
-      expectations: Map[Int, List[String]],
-  ): Future[Unit] = {
-    val header = """
-                   |/metals.json
-                   |{
-                   |  "a": {
-                   |    "libraryDependencies": [
-                   |      "io.circe::circe-generic:0.12.0"
-                   |    ]
-                   |  }
-                   |}
-                   |/a/src/main/scala/a/A.scala
-                   |""".stripMargin
-
-    cleanWorkspace()
-    for {
-      _ <- initialize(strip(header + code))
-      _ <- server.didOpen("a/src/main/scala/a/A.scala")
-      _ = assertNoDiagnostics()
-
-      path = server.toPath("a/src/main/scala/a/A.scala").toURI.toString
-      context = parse(code)
-      result <- server.assertSuperMethodHierarchy(
-        path,
-        expectations.toList,
-        context,
-      )
-    } yield result
+  test("library members") {
+    checkHierarchy(
+      libraryMembers,
+      Map(
+        1 -> List(),
+        2 -> List(),
+        3 -> List(),
+        4 -> List(
+          "scala.math.Ordering#compare",
+          "java.util.Comparator#compare",
+        ),
+        5 -> List(),
+        6 -> List(),
+      ),
+    )
   }
 
-  private def parse(
-      code: String
-  ): Map[Int, Position] = {
-    var line: Int = 0
-    var character: Int = 0
-    var prev = '0'
-    val result = scala.collection.mutable.Map[Int, Position]()
-    var buffer = ""
-    for (c <- code) {
-      if (c == '\n') {
-        line += 1
-        character = 0
-      }
-
-      if (c == '<' && prev == '<') {
-        buffer = ""
-      }
-      if (c == '>' && prev == '>') {
-        val context = buffer.substring(1, buffer.length - 1)
-        val num: Int = Integer.valueOf(context)
-        character = character - (buffer.length + 2)
-        result(num) = new Position(line, character)
-      }
-
-      buffer += c
-      prev = c
-      character += 1
-    }
-    result.toMap
+  test("library members scala 3") {
+    checkHierarchy(
+      libraryMembers,
+      Map(
+        1 -> List(),
+        2 -> List(),
+        3 -> List(),
+        4 -> List(
+          "scala.math.Ordering#compare",
+          "java.util.Comparator#compare",
+        ),
+        5 -> List(),
+        6 -> List(),
+      ),
+      V.scala3,
+    )
   }
 
-  private def strip(code: String): String = {
-    code.replaceAll("\\<\\<\\S*\\>\\>", "")
+  test("library members latest scala 3") {
+    checkHierarchy(
+      libraryMembers,
+      Map(
+        1 -> List(),
+        2 -> List(),
+        3 -> List(),
+        4 -> List(
+          "scala.math.Ordering#compare",
+          "java.util.Comparator#compare",
+        ),
+        5 -> List(),
+        6 -> List(),
+      ),
+      V.latestScala3Next,
+    )
+  }
+
+  test("scala 3 library member") {
+    checkHierarchy(
+      """
+        |package a
+        |object Main {
+        |  val p = scala.runtime.TupleXXL(1, 2).<<1>>productPrefix
+        |}
+        |""".stripMargin,
+      Map(1 -> List()),
+      V.scala3,
+    )
+  }
+
+  test("library overloads") {
+    checkHierarchy(
+      libraryOverloads,
+      Map(
+        1 -> List(),
+        2 -> List(),
+      ),
+      rawSymbols = true,
+    )
+  }
+
+  test("library overloads scala 3") {
+    checkHierarchy(
+      libraryOverloads,
+      Map(
+        1 -> List(),
+        2 -> List(),
+      ),
+      V.scala3,
+      rawSymbols = true,
+    )
+  }
+
+  private val workspaceMember =
+    """
+      |package a
+      |object Main {
+      |  val s = new Impl().<<1>>xxx
+      |}
+      |""".stripMargin
+
+  private val workspaceMemberFile =
+    """|/a/src/main/scala/a/Impl.scala
+       |package a
+       |trait Base { def xxx: String = "Base" }
+       |class Impl extends Base { override def xxx: String = "Impl" }
+       |""".stripMargin
+
+  test("workspace member in another file") {
+    checkHierarchy(
+      workspaceMember,
+      Map(1 -> List("a.Base#xxx")),
+      otherFiles = workspaceMemberFile,
+    )
+  }
+
+  test("workspace member in another file scala 2.12") {
+    checkHierarchy(
+      workspaceMember,
+      Map(1 -> List("a.Base#xxx")),
+      V.scala212,
+      otherFiles = workspaceMemberFile,
+    )
+  }
+
+  test("workspace member in another file scala 3") {
+    checkHierarchy(
+      workspaceMember,
+      Map(1 -> List()),
+      V.scala3,
+      otherFiles = workspaceMemberFile,
+    )
+  }
+
+  private val javaMember =
+    """
+      |package a;
+      |public class J {
+      |  int n = "a".<<1>>length();
+      |  StringBuilder b = new StringBuilder().<<2>>append('c');
+      |}
+      |""".stripMargin
+
+  private val javaFile = "a/src/main/java/a/J.java"
+
+  test("java member in a mixed target") {
+    checkHierarchy(
+      javaMember,
+      Map(1 -> List(), 2 -> List()),
+      file = javaFile,
+    )
+  }
+
+  test("java member in a mixed target scala 3") {
+    checkHierarchy(
+      javaMember,
+      Map(1 -> List(), 2 -> List()),
+      V.scala3,
+      file = javaFile,
+    )
+  }
+
+  test("java member in a java-only target") {
+    checkHierarchy(
+      javaMember,
+      Map(1 -> List(), 2 -> List()),
+      file = javaFile,
+      javaOnly = true,
+    )
+  }
+
+  test("java member with javac release 11") {
+    checkHierarchy(
+      javaMember,
+      Map(1 -> List(), 2 -> List()),
+      file = javaFile,
+      javacOptions = List("--release", "11"),
+    )
+  }
+
+  test("java member with javac release 11 scala 3") {
+    checkHierarchy(
+      javaMember,
+      Map(1 -> List(), 2 -> List()),
+      V.scala3,
+      file = javaFile,
+      javacOptions = List("--release", "11"),
+    )
+  }
+
+  test("library member in a dependency source") {
+    checkDependencySource(
+      V.scala213,
+      List(),
+    )
+  }
+
+  test("library member in a dependency source scala 3") {
+    checkDependencySource(
+      V.scala3,
+      List(),
+    )
   }
 
 }

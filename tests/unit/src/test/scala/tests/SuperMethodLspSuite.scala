@@ -3,8 +3,12 @@ package tests
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.{BuildInfo => V}
 
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.lsp4j.TextDocumentPositionParams
 
 class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
 
@@ -226,6 +230,54 @@ class SuperMethodLspSuite extends BaseLspSuite("gotosupermethod") {
         |""".stripMargin
 
     checkSuperMethod(code)
+  }
+
+  test("library member") {
+    checkLibraryMember(V.scala213)
+  }
+
+  test("library member scala 2.12") {
+    checkLibraryMember(V.scala212)
+  }
+
+  test("library member scala 3") {
+    checkLibraryMember(V.scala3)
+  }
+
+  private def checkLibraryMember(scalaVersion: String): Future[Unit] = {
+    val code =
+      """
+        |package a
+        |object Main { val xs = List(1).<<1->50>>map(_ + 1) }
+        |""".stripMargin
+    val header = s"""
+                    |/metals.json
+                    |{ "a": { "scalaVersion": "$scalaVersion" } }
+                    |/a/src/main/scala/a/A.scala
+                    |""".stripMargin
+
+    cleanWorkspace()
+    for {
+      _ <- initialize(strip(header + code))
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = assertNoDiagnostics()
+      path = server.toPath("a/src/main/scala/a/A.scala").toURI.toString
+      (context, assertions) = parseWithUri(code, path)
+      (position, _) = context(1)
+      definition <- server.fullServer
+        .definition(
+          new TextDocumentPositionParams(
+            new TextDocumentIdentifier(path),
+            position,
+          )
+        )
+        .asScala
+      listMap = definition.get(0)
+      result <- server.assertGotoSuperMethod(
+        assertions,
+        context + (50 -> (listMap.getRange.getStart, listMap.getUri)),
+      )
+    } yield result
   }
 
   def checkSuperMethodMulti(
