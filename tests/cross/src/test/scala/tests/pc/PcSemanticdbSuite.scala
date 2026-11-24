@@ -2,6 +2,7 @@ package tests.pc
 
 import java.net.URI
 
+import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.TextDocument
 
@@ -60,6 +61,55 @@ class PcSemanticdbSuite extends BasePCSuite {
     )
   )
 
+  test("diagnostics-built-twice") {
+    val uri = new URI("file:///Twice.scala")
+    val code =
+      """|object O {
+         |  val a: Int = ""
+         |}""".stripMargin
+    assertNoDiff(diagnostics(uri, code), StringNotInt)
+    assertNoDiff(diagnostics(uri, code), "")
+  }
+
+  test("diagnostics-built-twice-worksheet") {
+    val uri = new URI("file:///Twice.worksheet.sc")
+    val code = "val a: Int = \"\""
+    // the document lacks the diagnostics that the reporter has for a script
+    assertNoDiff(diagnostics(uri, code), "")
+    assertNoDiff(diagnostics(uri, code), "")
+  }
+
+  test("diagnostics-after-hover") {
+    val uri = new URI("file:///Hover.scala")
+    val code =
+      """|object O {
+         |  val a: Int = ""
+         |}""".stripMargin
+    presentationCompiler
+      .hover(CompilerOffsetParams(uri, code, code.indexOf("a:")))
+      .get()
+    assertNoDiff(diagnostics(uri, code), "")
+  }
+
+  test("diagnostics-after-edit") {
+    val uri = new URI("file:///Edit.scala")
+    val before =
+      """|object O {
+         |  val a: Int = ""
+         |}""".stripMargin
+    val after =
+      """|object O {
+         |  val a: String = 1
+         |}""".stripMargin
+    assertNoDiff(diagnostics(uri, before), StringNotInt)
+    assertNoDiff(
+      diagnostics(uri, after),
+      """|ERROR: type mismatch;
+         | found   : Int(1)
+         | required: String""".stripMargin
+    )
+  }
+
   def check(
       name: String,
       original: String,
@@ -79,5 +129,19 @@ class PcSemanticdbSuite extends BasePCSuite {
         getExpected(expected, compat, scalaVersion)
       )
     }
+  }
+
+  private val StringNotInt =
+    """|ERROR: type mismatch;
+       | found   : String("")
+       | required: Int""".stripMargin
+
+  private def diagnostics(uri: URI, code: String): String = {
+    val bytes = presentationCompiler.semanticdbTextDocument(uri, code).get()
+    TextDocument
+      .parseFrom(bytes)
+      .diagnostics
+      .map(d => s"${d.severity}: ${d.message}")
+      .mkString("\n")
   }
 }
