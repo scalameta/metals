@@ -1751,7 +1751,7 @@ final case class TestingServer(
             }
           }
         val input = abspath.toInputFromBuffers(buffers).copy(path = relpath)
-        val Some(pos) = loc.getRange().toMeta(input)
+        val pos = loc.getRange().toMeta(input).get
         val result = pos.formatMessage("", "definition")
         if (redactLineNumbers) {
           val toReplace = s":${pos.startLine + 1}:${pos.startColumn + 1}:"
