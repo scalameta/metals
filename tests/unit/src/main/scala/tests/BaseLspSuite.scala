@@ -243,16 +243,16 @@ abstract class BaseLspSuite(
       }
     }
     if (withoutVirtualDocs) {
-      test(testOpts.withName(s"${testOpts.name}-readonly")) {
+      super.test(testOpts.withName(s"${testOpts.name}-readonly")) {
         functionRetry(maxRetry)
       }
-      test(
+      super.test(
         testOpts
           .withName(s"${testOpts.name}-virtualdoc")
           .tag(TestingServer.virtualDocTag)
       ) { functionRetry(maxRetry) }
     } else {
-      test(testOpts)(functionRetry(maxRetry))
+      super.test(testOpts)(functionRetry(maxRetry))
     }
   }
 
