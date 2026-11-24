@@ -2,6 +2,7 @@ package tests
 
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
+import scala.meta.internal.mtags.Symbol
 
 /** Startup indexing of build target sources, used by the BSP symbol provider. */
 class KotlinBspIndexingLspSuite extends BaseLspSuite("kotlin-bsp-indexing") {
@@ -32,6 +33,37 @@ class KotlinBspIndexingLspSuite extends BaseLspSuite("kotlin-bsp-indexing") {
           .filterNot(_.startsWith("Add ';'")) // shown on some runs only
           .mkString("\n"),
         "a.Account#deposit",
+      )
+    } yield ()
+  }
+
+  test("kotlin-facade-in-definition-index-only") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/scala/a/Account.kt
+           |package a
+           |
+           |fun openAccount(owner: String) = owner
+           |""".stripMargin
+      )
+      _ = assertEquals(
+        server.server.definitionIndex
+          .definition(Symbol("a/AccountKt#openAccount()."))
+          .map(_.definitionSymbol.value),
+        Some("a/AccountKt#openAccount()."),
+      )
+      _ = assertNoDiff(
+        server
+          .workspaceSymbol("Account")
+          .linesIterator
+          .filterNot(_.startsWith("Add ';'")) // shown on some runs only
+          .mkString("\n"),
+        "a.openAccount",
       )
     } yield ()
   }

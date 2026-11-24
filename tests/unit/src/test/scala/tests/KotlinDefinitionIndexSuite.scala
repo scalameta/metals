@@ -12,9 +12,11 @@ import scala.meta.io.AbsolutePath
 /** Kotlin sources in the symbol index that resolves go-to-definition. */
 class KotlinDefinitionIndexSuite extends BaseSuite {
 
+  /** Fails when the index finds only a fallback, such as the owner class. */
   private def definitionFile(index: OnDemandSymbolIndex, sym: String): String =
     index
       .definition(Symbol(sym))
+      .filter(_.definitionSymbol.value == sym)
       .map(_.path.toNIO.getFileName.toString)
       .getOrElse(throw new NoSuchElementException(sym))
 
@@ -46,6 +48,8 @@ class KotlinDefinitionIndexSuite extends BaseSuite {
          |}
          |
          |fun defaultClient(): OkHttpClient = OkHttpClient()
+         |
+         |val timeout: Int = 10
          |""".stripMargin.getBytes("UTF-8")
     )
     zip.closeEntry()
@@ -58,6 +62,15 @@ class KotlinDefinitionIndexSuite extends BaseSuite {
       "Client.kt",
     )
     assertEquals(definitionFile(index, "okhttp3/defaultClient()."), "Client.kt")
+    // Java and Scala callers see top-level callables in the class `ClientKt`.
+    assertEquals(
+      definitionFile(index, "okhttp3/ClientKt#defaultClient()."),
+      "Client.kt",
+    )
+    assertEquals(
+      definitionFile(index, "okhttp3/ClientKt#getTimeout()."),
+      "Client.kt",
+    )
   }
 
   test("source-directory") {
@@ -66,9 +79,14 @@ class KotlinDefinitionIndexSuite extends BaseSuite {
       """|/a/A.kt
          |package a
          |class C
+         |/a/B.kt
+         |@file:JvmName("Utils")
+         |package a
+         |fun f() = 1
          |""".stripMargin
     )
     index.addSourceDirectory(root, dialects.Scala213)
     assertEquals(definitionFile(index, "a/C#"), "A.kt")
+    assertEquals(definitionFile(index, "a/Utils#f()."), "B.kt")
   }
 }

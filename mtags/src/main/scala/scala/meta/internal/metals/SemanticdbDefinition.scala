@@ -64,7 +64,8 @@ object SemanticdbDefinition {
       input: Input.VirtualFile,
       dialect: Dialect,
       includeMembers: Boolean,
-      collectIdentifiers: Boolean
+      collectIdentifiers: Boolean,
+      includeJvmFacade: Boolean = false
   )(
       fn: SemanticdbDefinition => Unit
   )(implicit rc: ReportContext): Option[MtagsIndexer] = {
@@ -126,7 +127,8 @@ object SemanticdbDefinition {
         val indexer = new KotlinMtags(
           input,
           includeMembers = includeMembers,
-          includeFuzzyReferences = collectIdentifiers
+          includeFuzzyReferences = collectIdentifiers,
+          includeJvmFacade = includeJvmFacade
         ) {
           override def visitFuzzyReferenceOccurrence(
               occ: SymbolOccurrence

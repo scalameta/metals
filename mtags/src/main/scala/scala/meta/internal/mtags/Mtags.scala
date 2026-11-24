@@ -230,7 +230,9 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
           new KotlinMtags(
             input,
             includeMembers = true,
-            includeFuzzyReferences = includeReferences
+            includeFuzzyReferences = includeReferences,
+            // Symbol search lists each declaration once, under its package.
+            includeJvmFacade = false
           )
         )
       } else {

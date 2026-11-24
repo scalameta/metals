@@ -272,13 +272,16 @@ class KotlinMtagsSuite extends munit.FunSuite {
     val definitions = List.newBuilder[String]
     SemanticdbDefinition.foreach(
       Mtags.testingSingleton,
-      Input.VirtualFile("A.kt", "package a\nclass C {\n  fun f() = 1\n}\n"),
+      Input.VirtualFile(
+        "A.kt",
+        "package a\nclass C {\n  fun f() = 1\n}\nfun g() = 2\n",
+      ),
       dialects.Scala213,
       includeMembers = true,
     )(definition => definitions += definition.info.symbol)(FailOnReport)
     assertEquals(
       definitions.result(),
-      List("a/", "a/C#", "a/C#f().", "a/C#`<init>`()."),
+      List("a/", "a/C#", "a/C#f().", "a/C#`<init>`().", "a/g()."),
     )
   }
 
