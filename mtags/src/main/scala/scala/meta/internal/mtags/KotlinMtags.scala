@@ -36,7 +36,7 @@ class KotlinMtags(
     extends MtagsIndexer {
   import KotlinMtags._
 
-  // Upstream SemanticDB has no Kotlin language; Mtags sets KOTLIN on the document.
+  // Kotlin is outside the scalameta SemanticDB `Language` enum.
   override def language: Language = Language.UNKNOWN_LANGUAGE
 
   override def overrides(): MtagsIndexer.AllOverrides = overridden.result()
