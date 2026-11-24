@@ -18,20 +18,15 @@ import scala.util.control.NonFatal
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
-import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ConnectionProvider
-import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
-import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.mcp.McpDependencyFinder.FindDepKey
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.SymbolType
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import ch.epfl.scala.bsp4j.StatusCode
 import io.modelcontextprotocol.json.jackson3.JacksonMcpJsonMapper
 import io.modelcontextprotocol.server.McpAsyncServerExchange
 import io.modelcontextprotocol.server.McpServerFeatures.AsyncToolSpecification
@@ -56,15 +51,14 @@ trait MetalsMcpTools extends Cancelable {
   // Abstract dependencies - concrete classes must provide these
   protected def queryEngine: McpQueryEngine
   protected def projectPath: AbsolutePath
-  protected def compilations: Compilations
+  protected def compiler: McpCompiler
   protected def focusedDocument: () => Option[AbsolutePath]
-  protected def diagnostics: Diagnostics
   protected def buildTargets: BuildTargets
   protected def mcpTestRunner: McpTestRunner
   protected def clientName: String
   protected def projectName: String
   protected def connectionProvider: ConnectionProvider
-  protected def scalaVersionSelector: ScalaVersionSelector
+  protected def dependencyFinder: McpDependencyFinder
   protected def scalafmtRunner: ScalafmtRunner
   protected def scalafixLlmRuleProvider: ScalafixLlmRuleProvider
   protected def indexingPromise: Promise[Unit]
@@ -83,9 +77,6 @@ trait MetalsMcpTools extends Cancelable {
     .build()
 
   protected val jsonMapper = new JacksonMcpJsonMapper(objectMapper)
-
-  protected lazy val dependencyFinder =
-    new McpDependencyFinder(projectPath, scalaVersionSelector)
 
   protected def createContent(text: String): JList[Content] = {
     Arrays.asList(new TextContent(text))
@@ -111,40 +102,17 @@ trait MetalsMcpTools extends Cancelable {
 
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, _) =>
+      withErrorHandling { (_, _) =>
         connectionProvider
           .slowConnectToBuildServer(forceImport = true)
           .map {
-            case BuildChange.None =>
-              CallToolResult
-                .builder()
-                .content(createContent("No changes detected"))
-                .isError(false)
-                .build()
+            case BuildChange.None => successResult("No changes detected")
             case BuildChange.Reconnected =>
-              CallToolResult
-                .builder()
-                .content(createContent("Reconnected to build server"))
-                .isError(false)
-                .build()
-            case BuildChange.Reloaded =>
-              CallToolResult
-                .builder()
-                .content(createContent("Build reloaded"))
-                .isError(false)
-                .build()
-            case BuildChange.Failed =>
-              CallToolResult
-                .builder()
-                .content(createContent("Failed to reimport build."))
-                .isError(true)
-                .build()
+              successResult("Reconnected to build server")
+            case BuildChange.Reloaded => successResult("Build reloaded")
+            case BuildChange.Failed => errorResult("Failed to reimport build.")
             case BuildChange.Cancelled =>
-              CallToolResult
-                .builder()
-                .content(createContent("Reimport cancelled by the user."))
-                .isError(true)
-                .build()
+              errorResult("Reimport cancelled by the user.")
           }
           .toMono
       },
@@ -163,42 +131,7 @@ trait MetalsMcpTools extends Cancelable {
     new AsyncToolSpecification(
       tool,
       withImportWait { (_, _) =>
-        val allTargets = buildTargets.allBuildTargetIds
-        if (allTargets.isEmpty)
-          Future
-            .successful(
-              CallToolResult
-                .builder()
-                .content(
-                  createContent(
-                    "Error: no modules found, try running `import-build`."
-                  )
-                )
-                .isError(true)
-                .build()
-            )
-            .toMono
-        else
-          compilations
-            .cascadeCompile(allTargets)
-            .map { _ =>
-              val allDiagnostics = diagnostics.allDiagnostics
-              val diagnosticsOutput = allDiagnostics.show(projectPath)
-              val content =
-                if (diagnosticsOutput.isEmpty) {
-                  "Compilation successful."
-                } else if (allDiagnostics.hasErrors) {
-                  s"Compilation failed with errors:\n$diagnosticsOutput"
-                } else {
-                  s"Compilation successful with warnings:\n$diagnosticsOutput"
-                }
-              CallToolResult
-                .builder()
-                .content(createContent(content))
-                .isError(false)
-                .build()
-            }
-            .toMono
+        compiler.compileAll().map(toolResult).toMono
       },
     )
   }
@@ -223,83 +156,7 @@ trait MetalsMcpTools extends Cancelable {
     new AsyncToolSpecification(
       tool,
       withImportWait { (_, arguments) =>
-        val path = arguments.getFileInFocus
-        if (path.exists) {
-          compilations
-            .compileFile(path)
-            .map { compileResult =>
-              lazy val buildTarget = buildTargets.inverseSources(path)
-
-              def inFileErrors = {
-                val fileDiagnostics = diagnostics.forFile(path)
-                val diagnosticsOutput = fileDiagnostics.show()
-                if (diagnosticsOutput.isEmpty) None
-                else {
-                  val prefix = if (fileDiagnostics.hasErrors) {
-                    "Found errors in"
-                  } else {
-                    "Found warnings in"
-                  }
-                  Some(s"$prefix $path:\n$diagnosticsOutput")
-                }
-              }
-
-              def inModuleErrors =
-                for {
-                  bt <- buildTarget
-                  diagnosticsOutput <- this.inModuleErrors(bt)
-                } yield {
-                  val moduleDiagnostics =
-                    diagnostics.allDiagnostics.filter { case (path, _) =>
-                      buildTargets.inverseSources(path).contains(bt)
-                    }
-                  val issuesType = if (moduleDiagnostics.hasErrors) {
-                    "errors"
-                  } else {
-                    "warnings"
-                  }
-                  s"No issues in the file, but found compile $issuesType in the module:\n$diagnosticsOutput"
-                }
-
-              def inUpstreamModulesErrors =
-                for {
-                  bt <- buildTarget
-                  errors <- upstreamModulesErros(bt, "file")
-                } yield errors
-
-              val diagnosticsContent = inFileErrors
-                .orElse(inModuleErrors)
-                .orElse(inUpstreamModulesErrors)
-
-              val content =
-                if (buildTarget.isEmpty) {
-                  s"Error: no build target for $path, try running `import-build`."
-                } else if (
-                  compileResult.getStatusCode == StatusCode.CANCELLED
-                ) {
-                  diagnosticsContent.getOrElse("Compilation cancelled.")
-                } else {
-                  diagnosticsContent.getOrElse("Compilation successful.")
-                }
-
-              CallToolResult
-                .builder()
-                .content(createContent(content))
-                .isError(buildTarget.isEmpty)
-                .build()
-            }
-            .toMono
-        } else {
-          Future
-            .successful(
-              CallToolResult
-                .builder()
-                .content(createContent(s"Error: File not found: $path"))
-                .isError(true)
-                .build()
-            )
-            .toMono
-        }
+        compiler.compileFile(arguments.getFileInFocus).map(toolResult).toMono
       },
     )
   }
@@ -325,94 +182,12 @@ trait MetalsMcpTools extends Cancelable {
     new AsyncToolSpecification(
       tool,
       withImportWait { (_, arguments) =>
-        val module = arguments.getAs[String]("module")
-        val targets = (buildTargets.allScala ++ buildTargets.allJava).toList
-        targets.find(_.displayName == module) match {
-          case Some(target) =>
-            compilations
-              .compileTarget(target.id)
-              .map { compileResult =>
-                val diagnosticsContent = inModuleErrors(target.id)
-                  .map { diagnosticsOutput =>
-                    val moduleDiagnostics =
-                      diagnostics.allDiagnostics.filter { case (path, _) =>
-                        buildTargets.inverseSources(path).contains(target.id)
-                      }
-                    val prefix = if (moduleDiagnostics.hasErrors) {
-                      "Found errors in the module"
-                    } else {
-                      "Found warnings in the module"
-                    }
-                    s"$prefix:\n$diagnosticsOutput"
-                  }
-                  .orElse(upstreamModulesErros(target.id, "module"))
-
-                val content =
-                  if (compileResult.getStatusCode == StatusCode.CANCELLED) {
-                    diagnosticsContent.getOrElse("Compilation cancelled")
-                  } else {
-                    diagnosticsContent.getOrElse("Compilation successful.")
-                  }
-
-                CallToolResult
-                  .builder()
-                  .content(createContent(content))
-                  .isError(false)
-                  .build()
-              }
-              .toMono
-          case None =>
-            Future
-              .successful(
-                CallToolResult
-                  .builder()
-                  .content(
-                    createContent(
-                      if (targets.isEmpty)
-                        "Error: no modules found, try running `import-build`."
-                      else
-                        s"Error: Module not found: $module, see `list-modules`."
-                    )
-                  )
-                  .isError(true)
-                  .build()
-              )
-              .toMono
-        }
+        compiler
+          .compileModule(arguments.getAs[String]("module"))
+          .map(toolResult)
+          .toMono
       },
     )
-  }
-
-  protected def inModuleErrors(
-      buildTarget: BuildTargetIdentifier
-  ): Option[String] = {
-    val moduleDiagnostics =
-      diagnostics.allDiagnostics.filter { case (path, _) =>
-        buildTargets.inverseSources(path).contains(buildTarget)
-      }
-
-    if (
-      moduleDiagnostics.nonEmpty && (moduleDiagnostics.hasErrors || moduleDiagnostics.hasWarnings)
-    ) {
-      Some(moduleDiagnostics.show(projectPath))
-    } else None
-  }
-
-  protected def upstreamModulesErros(
-      buildTarget: BuildTargetIdentifier,
-      fileOrModule: String,
-  ): Option[String] = {
-    val upstreamModules = diagnostics
-      .upstreamTargetsWithCompilationErrors(buildTarget)
-    if (upstreamModules.nonEmpty) {
-      val modules = upstreamModules
-        .flatMap(buildTargets.jvmTarget)
-        .map(_.displayName)
-        .mkString("\n", "\n", "")
-      Some(
-        s"Failed to compile the $fileOrModule, since there compile errors in upstream modules: $modules"
-      )
-    } else None
   }
 
   protected def createTestTool(): AsyncToolSpecification = {
@@ -468,22 +243,8 @@ trait MetalsMcpTools extends Cancelable {
           printOnlyErrorsAndSummary,
         )
         (result match {
-          case Right(value) =>
-            value.map(content =>
-              CallToolResult
-                .builder()
-                .content(createContent(content))
-                .isError(false)
-                .build()
-            )
-          case Left(error) =>
-            Future.successful(
-              CallToolResult
-                .builder()
-                .content(createContent(s"Error: $error"))
-                .isError(true)
-                .build()
-            )
+          case Right(value) => value.map(successResult)
+          case Left(error) => Future.successful(errorResult(s"Error: $error"))
         }).toMono
       },
     )
@@ -519,13 +280,7 @@ trait MetalsMcpTools extends Cancelable {
         val query = arguments.getAs[String]("query")
         queryEngine
           .globSearch(query, Set.empty)
-          .map(result =>
-            CallToolResult
-              .builder()
-              .content(createContent(result.show))
-              .isError(false)
-              .build()
-          )
+          .map(result => successResult(result.show))
           .toMono
       },
     )
@@ -579,13 +334,7 @@ trait MetalsMcpTools extends Cancelable {
 
         queryEngine
           .globSearch(query, symbolTypesSet)
-          .map(result =>
-            CallToolResult
-              .builder()
-              .content(createContent(result.show))
-              .isError(false)
-              .build()
-          )
+          .map(result => successResult(result.show))
           .toMono
       },
     )
@@ -644,11 +393,7 @@ trait MetalsMcpTools extends Cancelable {
         queryEngine
           .inspect(fqcn, pathOpt, moduleOpt, searchAllTargets)
           .map(result =>
-            CallToolResult
-              .builder()
-              .content(createContent(result.show))
-              .isError(result.results.isEmpty)
-              .build()
+            textResult(result.show, isError = result.results.isEmpty)
           )
           .toMono
       },
@@ -697,20 +442,12 @@ trait MetalsMcpTools extends Cancelable {
         val pathOpt = arguments.getFileInFocusOpt
         val moduleOpt = arguments.getOptNoEmptyString("module")
         Future {
-          queryEngine.getDocumentation(fqcn, pathOpt, moduleOpt) match {
-            case Some(result) =>
-              CallToolResult
-                .builder()
-                .content(createContent(result.show))
-                .isError(false)
-                .build()
-            case None =>
-              CallToolResult
-                .builder()
-                .content(createContent("Error: Symbol not found"))
-                .isError(true)
-                .build()
-          }
+          toolResult(
+            queryEngine
+              .getDocumentation(fqcn, pathOpt, moduleOpt)
+              .map(_.show)
+              .toRight("Error: Symbol not found")
+          )
         }.toMono
       },
     )
@@ -759,11 +496,7 @@ trait MetalsMcpTools extends Cancelable {
         val moduleOpt = arguments.getOptNoEmptyString("module")
         Future {
           val result = queryEngine.getUsages(fqcn, pathOpt, moduleOpt)
-          CallToolResult
-            .builder()
-            .content(createContent(result.show(projectPath)))
-            .isError(false)
-            .build()
+          successResult(result.show(projectPath))
         }.toMono
       },
     )
@@ -817,16 +550,7 @@ trait MetalsMcpTools extends Cancelable {
           version = arguments.getOptNoEmptyString(FindDepKey.version),
           fileInFocus = arguments.getFileInFocusOpt,
         )
-
-        Future
-          .successful(
-            CallToolResult
-              .builder()
-              .content(createContent(message))
-              .isError(false)
-              .build()
-          )
-          .toMono
+        Mono.just(successResult(message))
       },
     )
   }
@@ -854,18 +578,12 @@ trait MetalsMcpTools extends Cancelable {
             buildTargets.allBuildTargetIds.flatMap(
               buildTargets.jvmTarget(_).map(_.displayName)
             )
-          CallToolResult
-            .builder()
-            .content(
-              createContent(
-                if (modules.isEmpty)
-                  "No modules (build targets) found, try running `import-build`."
-                else
-                  s"Available modules (build targets):${modules.map(module => s"\n- $module").mkString}"
-              )
-            )
-            .isError(false)
-            .build()
+          successResult(
+            if (modules.isEmpty)
+              "No modules (build targets) found, try running `import-build`."
+            else
+              s"Available modules (build targets):${modules.map(module => s"\n- $module").mkString}"
+          )
         }.toMono
       },
     )
@@ -927,33 +645,15 @@ trait MetalsMcpTools extends Cancelable {
           }
 
         (selection match {
-          case Left(error) =>
-            Future.successful(
-              CallToolResult
-                .builder()
-                .content(createContent(error))
-                .isError(true)
-                .build()
-            )
+          case Left(error) => Future.successful(errorResult(error))
           case Right(formatArguments) =>
             val formatting =
               if (allSelected) scalafmtRunner.formatAll()
               else scalafmtRunner.format(formatArguments)
             formatting.map {
               case Right(()) =>
-                CallToolResult
-                  .builder()
-                  .content(
-                    createContent("Scalafmt completed successfully.")
-                  )
-                  .isError(false)
-                  .build()
-              case Left(message) =>
-                CallToolResult
-                  .builder()
-                  .content(createContent(s"Scalafmt failed:\n$message"))
-                  .isError(true)
-                  .build()
+                successResult("Scalafmt completed successfully.")
+              case Left(message) => errorResult(s"Scalafmt failed:\n$message")
             }
         }).toMono
       },
@@ -1055,21 +755,10 @@ trait MetalsMcpTools extends Cancelable {
           )
         resultingFuture.map {
           case Right(res) =>
-            CallToolResult
-              .builder()
-              .content(
-                createContent(
-                  s"Created and ran Scalafix rule ${res.ruleName} successfully"
-                )
-              )
-              .isError(false)
-              .build()
-          case Left(error) =>
-            CallToolResult
-              .builder()
-              .content(createContent(errorMessage(error)))
-              .isError(true)
-              .build()
+            successResult(
+              s"Created and ran Scalafix rule ${res.ruleName} successfully"
+            )
+          case Left(error) => errorResult(errorMessage(error))
         }.toMono
       },
     )
@@ -1112,20 +801,8 @@ trait MetalsMcpTools extends Cancelable {
             scalafixLlmRuleProvider.runScalafixRuleForAllTargets(ruleName)
         }
         runResult
-          .map { _ =>
-            CallToolResult
-              .builder()
-              .content(createContent("Scalafix rule run successfully"))
-              .isError(false)
-              .build()
-          }
-          .recover { case error =>
-            CallToolResult
-              .builder()
-              .content(createContent(error.getMessage))
-              .isError(true)
-              .build()
-          }
+          .map(_ => successResult("Scalafix rule run successfully"))
+          .recover { case error => errorResult(error.getMessage) }
           .toMono
       },
     )
@@ -1155,15 +832,7 @@ trait MetalsMcpTools extends Cancelable {
             allRules.toList.sortBy(_._1).map { case (ruleName, description) =>
               s"- $ruleName: $description"
             }
-          CallToolResult
-            .builder()
-            .content(
-              createContent(
-                s"Available scalafix rules:\n${content.mkString("\n")}"
-              )
-            )
-            .isError(false)
-            .build()
+          successResult(s"Available scalafix rules:\n${content.mkString("\n")}")
         }.toMono
       },
     )
@@ -1220,24 +889,12 @@ trait MetalsMcpTools extends Cancelable {
         val moduleOpt = arguments.getOptNoEmptyString("module")
         val detailed = arguments.getOptAs[Boolean]("detailed").getOrElse(false)
         Future {
-          queryEngine.getSource(fqcn, pathOpt, moduleOpt, detailed) match {
-            case Some((_, content)) =>
-              CallToolResult
-                .builder()
-                .content(
-                  createContent(content)
-                )
-                .isError(false)
-                .build()
-            case None =>
-              CallToolResult
-                .builder()
-                .content(
-                  createContent(s"Error: Source not found for symbol: $fqcn")
-                )
-                .isError(true)
-                .build()
-          }
+          toolResult(
+            queryEngine
+              .getSource(fqcn, pathOpt, moduleOpt, detailed)
+              .map { case (_, content) => content }
+              .toRight(s"Error: Source not found for symbol: $fqcn")
+          )
         }.toMono
       },
     )
@@ -1287,7 +944,10 @@ trait MetalsMcpTools extends Cancelable {
     (exchange, request) => {
       val runIfImported = Mono.defer[CallToolResult] { () =>
         if (indexingPromise.isCompleted) handler(exchange, request)
-        else errorResult("No build imported yet. Run `import-build` first.")
+        else
+          Mono.just(
+            errorResult("No build imported yet. Run `import-build` first.")
+          )
       }
       // Until the first connect finishes, its request may not be queued yet.
       val firstConnect = connectionProvider.buildServerPromise
@@ -1334,14 +994,21 @@ trait MetalsMcpTools extends Cancelable {
 
   private val importProgressInterval = Duration.ofSeconds(5)
 
-  private def errorResult(message: String): Mono[CallToolResult] =
-    Mono.just(
-      CallToolResult
-        .builder()
-        .content(createContent(message))
-        .isError(true)
-        .build()
-    )
+  private def toolResult(result: Either[String, String]): CallToolResult =
+    result.fold(errorResult, successResult)
+
+  private def successResult(text: String): CallToolResult =
+    textResult(text, isError = false)
+
+  private def errorResult(text: String): CallToolResult =
+    textResult(text, isError = true)
+
+  private def textResult(text: String, isError: Boolean): CallToolResult =
+    CallToolResult
+      .builder()
+      .content(createContent(text))
+      .isError(isError)
+      .build()
 
   protected def withErrorHandling(
       f: (McpAsyncServerExchange, JMap[String, Object]) => Mono[CallToolResult]
@@ -1351,41 +1018,19 @@ trait MetalsMcpTools extends Cancelable {
     Mono[CallToolResult],
   ] = { (exchange, request) =>
     val arguments = request.arguments()
+    def failure(e: Throwable): Mono[CallToolResult] = {
+      scribe.warn(
+        s"Error while processing request: ${e.getMessage}, arguments: ${arguments.toJson}, stacktrace:" +
+          e.getStackTrace.mkString("\n")
+      )
+      Mono.just(
+        errorResult(s"Error: ${e.getMessage}, arguments: ${arguments.toJson}")
+      )
+    }
     try {
-      f(exchange, arguments).onErrorResume { e =>
-        scribe.warn(
-          s"Error while processing request: ${e.getMessage}, arguments: ${arguments.toJson}, stacktrace:" +
-            e.getStackTrace.mkString("\n")
-        )
-        Mono.just(
-          CallToolResult
-            .builder()
-            .content(
-              createContent(
-                s"Error: ${e.getMessage}, arguments: ${arguments.toJson}"
-              )
-            )
-            .isError(true)
-            .build()
-        )
-      }
+      f(exchange, arguments).onErrorResume(failure)
     } catch {
-      case NonFatal(e) =>
-        scribe.warn(
-          s"Error while processing request: ${e.getMessage}, arguments: ${arguments.toJson}, stacktrace:" +
-            e.getStackTrace.mkString("\n")
-        )
-        Mono.just(
-          CallToolResult
-            .builder()
-            .content(
-              createContent(
-                s"Error: ${e.getMessage}, arguments: ${arguments.toJson}"
-              )
-            )
-            .isError(true)
-            .build()
-        )
+      case NonFatal(e) => failure(e)
     }
   }
 

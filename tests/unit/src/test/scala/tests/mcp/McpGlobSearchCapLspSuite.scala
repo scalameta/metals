@@ -30,7 +30,7 @@ class McpGlobSearchCapLspSuite extends BaseLspSuite("mcp-glob-search-cap") {
       _ <- server.didOpen("a/src/main/scala/com/capped/CappedProbes.scala")
       _ = assertNoDiagnostics()
 
-      truncated <- server.headServer.queryEngine.globSearch(
+      truncated <- server.headServer.mcpQueryEngine.globSearch(
         "CappedProbe",
         Set(SymbolType.Class),
       )
@@ -48,7 +48,7 @@ class McpGlobSearchCapLspSuite extends BaseLspSuite("mcp-glob-search-cap") {
       )
 
       // a result set below the cap has no notice at all
-      complete <- server.headServer.queryEngine.globSearch(
+      complete <- server.headServer.mcpQueryEngine.globSearch(
         "CappedProbe3",
         Set(SymbolType.Class),
       )
