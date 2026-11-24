@@ -77,6 +77,8 @@ case class QuickBuild(
     // deserialization for this one field.
     skipSources: Boolean,
     repositories: Array[String],
+    javaOnly: Boolean,
+    javacOptions: Array[String],
 ) {
   def withId(id: String): QuickBuild =
     QuickBuild(
@@ -93,6 +95,8 @@ case class QuickBuild(
       platformJavaHome,
       skipSources,
       orEmpty(repositories),
+      javaOnly,
+      orEmpty(javacOptions),
     )
   private def orEmpty(array: Array[String]): Array[String] =
     if (array == null) new Array(0) else array
@@ -260,7 +264,7 @@ case class QuickBuild(
       classpath,
       out,
       classDirectory,
-      scala = Some(
+      scala = Option.when(!javaOnly)(
         C.Scala(
           scalaOrg,
           scalaCompilerName,
@@ -289,7 +293,7 @@ case class QuickBuild(
           None,
         )
       ),
-      java = Some(C.Java(Nil)),
+      java = Some(C.Java(javacOptions.toList)),
       sbt = sbt,
       test = testFrameworks,
       platform = Some(

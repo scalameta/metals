@@ -348,11 +348,15 @@ final case class TestingServer(
       uri: String,
       expectations: List[(Int, List[String])],
       context: Map[Int, l.Position],
+      rawSymbols: Boolean = false,
   )(implicit loc: munit.Location): Future[Unit] = {
     val obtained = scala.collection.mutable.Buffer[Set[String]]()
     client.showMessageRequestHandler = { req =>
       val titles = req.getActions.asScala
-        .map(action => formatMethodSymbolForQuickPick(action.getTitle))
+        .map(action =>
+          if (rawSymbols) action.getTitle
+          else formatMethodSymbolForQuickPick(action.getTitle)
+        )
         .toSet
       obtained.append(titles)
       Some(req.getActions.get(0))
@@ -365,8 +369,13 @@ final case class TestingServer(
             new TextDocumentIdentifier(uri),
             context(pos),
           )
+          val shown = obtained.size
           executeCommand(ServerCommands.SuperMethodHierarchy, command)
-            .flatMap(_ => exec(tl).map(rest => expected.toSet +: rest))
+            .flatMap { _ =>
+              // the server shows no quick pick if the hierarchy is empty
+              if (obtained.size == shown) obtained.append(Set.empty)
+              exec(tl).map(rest => expected.toSet +: rest)
+            }
 
         case _ =>
           Future.successful(List.empty)
