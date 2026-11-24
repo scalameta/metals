@@ -64,7 +64,11 @@ final class LibraryNames(classpath: Seq[Path]) {
 
   private def isClass(name: String): Boolean = name.endsWith(".class")
 
-  /** Public static methods, and the property names of getters and setters. */
+  /**
+   * Static methods, and the property names of getters and setters. An
+   * `@InlineOnly` function is private in the class file, so the caller
+   * filters by the Kotlin visibility.
+   */
   private def members(bytes: Array[Byte]): Seq[String] = {
     val result = mutable.ListBuffer.empty[String]
     val visitor = new ClassVisitor(Opcodes.ASM9) {
@@ -75,9 +79,9 @@ final class LibraryNames(classpath: Seq[Path]) {
           signature: String,
           exceptions: Array[String]
       ): MethodVisitor = {
-        val visible = Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC
         if (
-          (access & visible) == visible && (access & Opcodes.ACC_SYNTHETIC) == 0
+          (access & Opcodes.ACC_STATIC) != 0 &&
+          (access & Opcodes.ACC_SYNTHETIC) == 0
         ) {
           // Inline class parameters add a `-hash` suffix to the JVM name.
           val method = name.takeWhile(_ != '-')

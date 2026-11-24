@@ -245,6 +245,41 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
     finally syncWith(main, model)
   }
 
+  test("completion-stdlib-inline-only-extensions") {
+    for (name <- List("let", "apply", "also")) {
+      val text =
+        main.replace("  val sb", s"  msg.${name.init}@@\n  val sb")
+      assert(completions(text).contains(name), clue(completions(text)))
+    }
+  }
+
+  test("completion-stdlib-inline-only-functions") {
+    for (name <- List("println", "TODO")) {
+      val text = main.replace("  val sb", s"  ${name.init}@@\n  val sb")
+      assert(completions(text).contains(name), clue(completions(text)))
+    }
+  }
+
+  test("completion-stdlib-skips-internal") {
+    val text = main.replace("  val sb", "  requir@@\n  val sb")
+    assertEquals(completions(text), List("require", "requireNotNull"))
+  }
+
+  test("completion-stdlib-skips-internal-class") {
+    val items = completions(main.replace("  val sb", "  Array@@\n  val sb"))
+    assert(items.contains("ArrayDeque"), clue(items))
+    assert(!items.contains("ArrayAsCollection"), clue(items))
+  }
+
+  test("completion-import-skips-internal") {
+    val items = completions(importing("kotlin.text.re@@"))
+    assert(items.contains("replace"), clue(items))
+    assert(!items.contains("requireNonNegativeLimit"), clue(items))
+    val classes = completions(importing("kotlin.collections.Array@@"))
+    assert(classes.contains("ArrayDeque"), clue(classes))
+    assert(!classes.contains("ArrayAsCollection"), clue(classes))
+  }
+
   test("completion-scope") {
     val text = main.replace("  val sb", "  gre@@\n  val sb")
     assert(completions(text).contains("greet"), clue(completions(text)))

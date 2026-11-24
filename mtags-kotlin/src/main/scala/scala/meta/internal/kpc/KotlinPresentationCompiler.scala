@@ -58,6 +58,7 @@ import org.jetbrains.kotlin.analysis.api.symbols.KaDeclarationSymbol
 import org.jetbrains.kotlin.analysis.api.symbols.KaFunctionSymbol
 import org.jetbrains.kotlin.analysis.api.symbols.KaPackageSymbol
 import org.jetbrains.kotlin.analysis.api.symbols.KaSymbol
+import org.jetbrains.kotlin.analysis.api.symbols.KaSymbolVisibility
 import org.jetbrains.kotlin.analysis.api.symbols.markers.KaNamedSymbol
 import org.jetbrains.kotlin.analysis.api.types.KaClassType
 import org.jetbrains.kotlin.idea.references.ReferenceUtilsKt
@@ -395,11 +396,12 @@ case class KotlinPresentationCompiler(
       .filter(matches)
       .asJava
     val classifiers = Kt.toList(scope.classifiers(Kt.predicate(matches))) ++
-      Kt.toList(scope.classifiers(names))
+      Kt.toList(scope.classifiers(names)).filter(isUsable)
     // An import can name an extension; an expression can call it only on a
     // receiver.
     val callables = (Kt.toList(scope.callables(Kt.predicate(matches))) ++
-      Kt.toList(scope.callables(names))).filter(inImport || !_.isExtension)
+      Kt.toList(scope.callables(names)).filter(isUsable))
+      .filter(inImport || !_.isExtension)
     val packages = Kt
       .toList(scope.getPackageSymbols(Kt.predicate(matches)))
       .map(p =>
@@ -427,7 +429,7 @@ case class KotlinPresentationCompiler(
         Kt.toList(scope.classifiers(Kt.predicate(matches)))
       ) ++
         libraryScopes(s, file, matches).flatMap { case (scope, names) =>
-          Kt.toList(scope.classifiers(names.asJava))
+          Kt.toList(scope.classifiers(names.asJava)).filter(isUsable)
         }
     // Without a receiver, an extension applies to an implicit receiver, such
     // as `this` in `x.run { ... }`.
@@ -463,8 +465,13 @@ case class KotlinPresentationCompiler(
     scopes.flatMap(scope =>
       Kt.toList(scope.callables(Kt.predicate(matches)))
     ) ++ libraryScopes(s, file, matches).flatMap { case (scope, names) =>
-      Kt.toList(scope.callables(names.asJava))
+      Kt.toList(scope.callables(names.asJava)).filter(isUsable)
     }
+
+  /** A library declaration that code outside the library can use. */
+  private def isUsable(symbol: KaDeclarationSymbol): Boolean =
+    symbol.getVisibility == KaSymbolVisibility.PUBLIC ||
+      symbol.getVisibility == KaSymbolVisibility.PROTECTED
 
   /**
    * Scopes of the packages that `file` sees without a qualifier, each with
