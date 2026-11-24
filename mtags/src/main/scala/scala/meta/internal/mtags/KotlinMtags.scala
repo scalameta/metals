@@ -468,6 +468,8 @@ class KotlinMtags(
       last.foreach(parents += _)
       if (isSym(peek(), '<')) { next(); skipBalanced('<', '>') }
       if (isSym(peek(), '(')) { next(); skipBalanced('(', ')') }
+      // A function type supertype, such as `() -> V`.
+      if (isSym(peek(), '-')) skipType()
       if (isIdent(peek(), "by")) {
         next()
         skipUntil(stopAtClosingParen = false) match {

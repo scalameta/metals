@@ -378,4 +378,61 @@ class KotlinMtagsSuite extends munit.FunSuite {
       List("a/foo().", "a/bar.", "a/getBar()."),
     )
   }
+
+  test("function-type-supertype") {
+    assertEquals(
+      definitions(
+        """|package a
+           |interface P<out V> : Base<V>, () -> V {
+           |  fun get(): V
+           |}
+           |class Q : (Int) -> String {
+           |  override fun invoke(x: Int): String = ""
+           |}
+           |fun after() = 1
+           |""".stripMargin
+      ),
+      List("a/P#", "a/P#get().", "a/Q#", "a/Q#invoke().", "a/Q#`<init>`().",
+        "a/after()."),
+    )
+  }
+
+  test("function-type-in-type-arguments") {
+    assertEquals(
+      definitions(
+        """|package a
+           |fun handlers(): List<(Int) -> Unit> = emptyList()
+           |val callbacks: Map<String, (String) -> Boolean> = emptyMap()
+           |class H : Base<(Int) -> Unit>() {
+           |  fun inside() = 1
+           |}
+           |fun after() = 1
+           |""".stripMargin
+      ),
+      List("a/handlers().", "a/callbacks.", "a/getCallbacks().", "a/H#",
+        "a/H#inside().", "a/H#`<init>`().", "a/after()."),
+    )
+  }
+
+  test("annotated-enum-entries") {
+    assertEquals(
+      definitions(
+        """|package a
+           |enum class E {
+           |  @Deprecated("x") OLD,
+           |  NEW;
+           |  fun f() = 1
+           |}
+           |""".stripMargin
+      ),
+      List("a/E#", "a/E#OLD.", "a/E#NEW.", "a/E#f().", "a/E#`<init>`()."),
+    )
+  }
+
+  test("unterminated-raw-string-at-end") {
+    assertEquals(
+      definitions("package a\nfun ok() = 1\nval s = \"\"\"abc\n"),
+      List("a/ok().", "a/s.", "a/getS()."),
+    )
+  }
 }
