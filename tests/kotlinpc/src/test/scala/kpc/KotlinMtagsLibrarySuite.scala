@@ -18,12 +18,14 @@ import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.fileClasses.JvmFileClassUtil
 import org.jetbrains.kotlin.psi._
 
 /**
  * Assert the symbols emitted by KotlinMtags match the declarations that the
- * Kotlin parser finds in library sources. Overload suffixes and constructors
- * are left out of the comparison.
+ * Kotlin parser finds in library sources, with the JVM facade class that the
+ * Kotlin compiler gives each file. Overload suffixes and constructors are left
+ * out of the comparison.
  */
 class KotlinMtagsLibrarySuite extends munit.FunSuite {
 
@@ -80,7 +82,9 @@ class KotlinMtagsLibrarySuite extends munit.FunSuite {
               )
               .filterNot(_.contains("`<init>`"))
               .toSet
-            val expected = parserSymbols(factory.createFile(path, text))
+            val expected = parserSymbols(
+              factory.createFile(file.toNIO.getFileName.toString, text)
+            )
             assertNoDiff(
               obtained.toList.sorted.mkString("\n"),
               expected.toList.sorted.mkString("\n"),
@@ -127,6 +131,28 @@ class KotlinMtagsLibrarySuite extends munit.FunSuite {
       if (isVar)
         emit(offset, owner + encode(setter) + "().")
     }
+    val pkg = file.getPackageFqName.pathSegments().asScala
+    val packageOwner =
+      if (pkg.isEmpty) "_empty_/"
+      else pkg.map(n => encode(n.asString) + "/").mkString
+    // A top-level function or property is also a member of the JVM facade
+    // class, which the first such declaration defines.
+    val facade = packageOwner + encode(
+      JvmFileClassUtil
+        .getFileClassInfoNoResolve(file)
+        .getFacadeClassFqName
+        .shortName
+        .asString
+    ) + "#"
+    var facadeDefined = false
+    def withFacade(owner: String, offset: Int): List[String] =
+      if (owner == packageOwner) {
+        if (!facadeDefined) {
+          emit(offset, facade)
+          facadeDefined = true
+        }
+        List(owner, facade)
+      } else List(owner)
     def walk(declarations: Seq[KtDeclaration], owner: String): Unit =
       declarations.foreach {
         case d: KtEnumEntry =>
@@ -155,18 +181,16 @@ class KotlinMtagsLibrarySuite extends munit.FunSuite {
             walk(d.getDeclarations.asScala.toSeq, symbol)
           }
         case d: KtNamedFunction if d.getName != null =>
-          emit(d.getTextOffset, owner + encode(d.getName) + "().")
+          for (o <- withFacade(owner, d.getTextOffset))
+            emit(d.getTextOffset, o + encode(d.getName) + "().")
         case d: KtProperty if d.getName != null =>
-          property(d.getTextOffset, owner, d.getName, d.isVar, false)
+          for (o <- withFacade(owner, d.getTextOffset))
+            property(d.getTextOffset, o, d.getName, d.isVar, false)
         case d: KtTypeAlias if d.getName != null =>
           emit(d.getTextOffset, owner + encode(d.getName) + "#")
         case _ =>
       }
-    val pkg = file.getPackageFqName.pathSegments().asScala
-    val owner =
-      if (pkg.isEmpty) "_empty_/"
-      else pkg.map(n => encode(n.asString) + "/").mkString
-    walk(file.getDeclarations.asScala.toSeq, owner)
+    walk(file.getDeclarations.asScala.toSeq, packageOwner)
     result.result()
   }
 }
