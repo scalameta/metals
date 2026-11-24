@@ -105,13 +105,12 @@ final case class CallHierarchyProvider(
       params: CallHierarchyIncomingCallsParams,
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[List[CallHierarchyIncomingCall]] = {
-    val parents = supermethods
+    supermethods
       .getSuperMethodHierarchySymbols(
         params.getItem.getUri,
         params.getItem.getSelectionRange.getStart,
       )
-      .getOrElse(List())
-    incomingCalls(params, parents, token)
+      .flatMap(incomingCalls(params, _, token))
   }
 
   private def incomingCalls(
