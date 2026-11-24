@@ -353,7 +353,7 @@ object SbtBuildTool {
     }
   }
 
-  private case class PluginDetails(
+  case class PluginDetails(
       description: Seq[String],
       artifact: String,
       resolver: Option[String],

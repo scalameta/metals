@@ -65,7 +65,7 @@ class SemanticdbIndexer(
    * In case of a null path, we re-index `META-INF/semanticdb` for all targets
    */
   def onOverflow(path: SemanticdbPath): Unit = {
-    if (path == null) {
+    if ((path: Any) == null) {
       onTargetRoots()
     } else {
       path.semanticdbRoot.foreach(onChangeDirectory(_))
