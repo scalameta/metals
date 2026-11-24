@@ -115,3 +115,20 @@ The endpoints is `scala.meta.internal.mtags.Mtags`, which dispatches to several 
   - The unit test (`ScalaToplevelSuite.scala`) is a good resource to see which symbols it extracts.
 - `JavaMtags` parses the given Java file using `qdox`.
 - `JavaToplevelMtags` tokenize and parses Java code in the same way as `ScalaToplevelMtags`. We use our own custom tokenizer and parser instead of `qdox` for fast indexing.
+- `KotlinMtags` indexes Kotlin files. See [Kotlin](#kotlin).
+
+## Kotlin
+
+`KotlinMtags` reads the declarations of a `.kt` file with a hand-written lexer (`KotlinLexer`) and parser. It skips function bodies and initializers. With `includeFuzzyReferences`, the identifiers in them become fuzzy references.
+
+The symbols follow the format of the [`semanticdb-kotlinc`](https://github.com/sourcegraph/scip-kotlin) compiler plugin: `pkg/f().` is a top-level function, `pkg/f(+1).` a second method `f` of the same owner (generated accessors count too), `pkg/Obj#` an object, `pkg/p.` a property and `pkg/getP().` its getter. Some symbols use the JVM names that Java and Scala callers see:
+
+| Declaration | `KotlinMtags` | `semanticdb-kotlinc` |
+| --- | --- | --- |
+| Getter of `val isEmpty: Boolean` | `isEmpty().` | `getIsEmpty().` |
+| Parameter of `annotation class A(val value: String)` | `A#value.`, `A#value().` | `A#value.`, `A#getValue().` |
+| Enum entry `RED` of `enum class Color` | `Color#RED.` | an anonymous object |
+
+The setter of `var isOn` is `setOn().`. An explicit getter or setter (`get() = ...`) is at the position of the property name. The index has classes, objects (a nameless companion is `Companion#`), functions, properties with their accessors, type aliases, constructors (also the default one) and enum entries. Class members are in it only with `includeMembers`.
+
+`KotlinMtagsSuite.scala` and the expect files in `tests/unit/src/test/resources/mtags-kotlin` show which symbols `KotlinMtags` extracts. The symbol format was compared with `semanticdb-kotlinc` 0.6.0 on the Kotlin compiler 2.2.0.
