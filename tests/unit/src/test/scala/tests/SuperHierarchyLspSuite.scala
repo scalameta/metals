@@ -100,15 +100,25 @@ class SuperHierarchyLspSuite
     checkHierarchy(
       libraryMembers,
       Map(
-        1 -> List(),
-        2 -> List(),
-        3 -> List(),
+        1 -> List(
+          "scala.collection.StrictOptimizedIterableOps#map",
+          "scala.collection.IterableOps#map",
+          "scala.collection.IterableOnceOps#map",
+        ),
+        2 -> List("java.lang.CharSequence#length"),
+        3 -> List(
+          "scala.Function1#toString",
+          "scala.collection.Iterable#toString",
+        ),
         4 -> List(
           "scala.math.Ordering#compare",
           "java.util.Comparator#compare",
         ),
         5 -> List(),
-        6 -> List(),
+        6 -> List(
+          ";java.lang.AbstractStringBuilder#append",
+          "java.lang.Appendable#append",
+        ),
       ),
     )
   }
@@ -117,15 +127,25 @@ class SuperHierarchyLspSuite
     checkHierarchy(
       libraryMembers,
       Map(
-        1 -> List(),
-        2 -> List(),
-        3 -> List(),
+        1 -> List(
+          "scala.collection.StrictOptimizedIterableOps#map",
+          "scala.collection.IterableOps#map",
+          "scala.collection.IterableOnceOps#map",
+        ),
+        2 -> List("java.lang.CharSequence#length"),
+        3 -> List(
+          "scala.Function1#toString",
+          "scala.collection.Iterable#toString",
+        ),
         4 -> List(
           "scala.math.Ordering#compare",
           "java.util.Comparator#compare",
         ),
         5 -> List(),
-        6 -> List(),
+        6 -> List(
+          "java.lang.AbstractStringBuilder#append",
+          "java.lang.Appendable#append",
+        ),
       ),
       V.scala3,
     )
@@ -135,15 +155,25 @@ class SuperHierarchyLspSuite
     checkHierarchy(
       libraryMembers,
       Map(
-        1 -> List(),
-        2 -> List(),
-        3 -> List(),
+        1 -> List(
+          "scala.collection.StrictOptimizedIterableOps#map",
+          "scala.collection.IterableOps#map",
+          "scala.collection.IterableOnceOps#map",
+        ),
+        2 -> List("java.lang.CharSequence#length"),
+        3 -> List(
+          "scala.Function1#toString",
+          "scala.collection.Iterable#toString",
+        ),
         4 -> List(
           "scala.math.Ordering#compare",
           "java.util.Comparator#compare",
         ),
         5 -> List(),
-        6 -> List(),
+        6 -> List(
+          "java.lang.AbstractStringBuilder#append",
+          "java.lang.Appendable#append",
+        ),
       ),
       V.latestScala3Next,
     )
@@ -157,7 +187,7 @@ class SuperHierarchyLspSuite
         |  val p = scala.runtime.TupleXXL(1, 2).<<1>>productPrefix
         |}
         |""".stripMargin,
-      Map(1 -> List()),
+      Map(1 -> List("scala.Product#productPrefix")),
       V.scala3,
     )
   }
@@ -166,8 +196,8 @@ class SuperHierarchyLspSuite
     checkHierarchy(
       libraryOverloads,
       Map(
-        1 -> List(),
-        2 -> List(),
+        1 -> List("scala/collection/mutable/Buffer#remove()."),
+        2 -> List("scala/collection/mutable/Buffer#remove(+1)."),
       ),
       rawSymbols = true,
     )
@@ -177,8 +207,8 @@ class SuperHierarchyLspSuite
     checkHierarchy(
       libraryOverloads,
       Map(
-        1 -> List(),
-        2 -> List(),
+        1 -> List("scala/collection/mutable/Buffer#remove()."),
+        2 -> List("scala/collection/mutable/Buffer#remove(+1)."),
       ),
       V.scala3,
       rawSymbols = true,
@@ -220,7 +250,7 @@ class SuperHierarchyLspSuite
   test("workspace member in another file scala 3") {
     checkHierarchy(
       workspaceMember,
-      Map(1 -> List()),
+      Map(1 -> List("a.Base#xxx")),
       V.scala3,
       otherFiles = workspaceMemberFile,
     )
@@ -240,7 +270,7 @@ class SuperHierarchyLspSuite
   test("java member in a mixed target") {
     checkHierarchy(
       javaMember,
-      Map(1 -> List(), 2 -> List()),
+      Map(1 -> List("java.lang.CharSequence#length"), 2 -> List()),
       file = javaFile,
     )
   }
@@ -248,7 +278,7 @@ class SuperHierarchyLspSuite
   test("java member in a mixed target scala 3") {
     checkHierarchy(
       javaMember,
-      Map(1 -> List(), 2 -> List()),
+      Map(1 -> List("java.lang.CharSequence#length"), 2 -> List()),
       V.scala3,
       file = javaFile,
     )
@@ -266,7 +296,7 @@ class SuperHierarchyLspSuite
   test("java member with javac release 11") {
     checkHierarchy(
       javaMember,
-      Map(1 -> List(), 2 -> List()),
+      Map(1 -> List("java.lang.CharSequence#length"), 2 -> List()),
       file = javaFile,
       javacOptions = List("--release", "11"),
     )
@@ -275,7 +305,7 @@ class SuperHierarchyLspSuite
   test("java member with javac release 11 scala 3") {
     checkHierarchy(
       javaMember,
-      Map(1 -> List(), 2 -> List()),
+      Map(1 -> List("java.lang.CharSequence#length"), 2 -> List()),
       V.scala3,
       file = javaFile,
       javacOptions = List("--release", "11"),
@@ -285,14 +315,14 @@ class SuperHierarchyLspSuite
   test("library member in a dependency source") {
     checkDependencySource(
       V.scala213,
-      List(),
+      List("scala.collection.IterableOnceOps#toList"),
     )
   }
 
   test("library member in a dependency source scala 3") {
     checkDependencySource(
       V.scala3,
-      List(),
+      List("scala.collection.IterableOnceOps#toList"),
     )
   }
 

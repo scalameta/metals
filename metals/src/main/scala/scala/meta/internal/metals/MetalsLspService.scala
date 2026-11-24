@@ -678,6 +678,7 @@ abstract class MetalsLspService(
     symbolHierarchyOps,
     mbtSymbolSearch,
     () => userConfig,
+    compilers,
   )
 
   protected val scalafixProvider: ScalafixProvider = ScalafixProvider(

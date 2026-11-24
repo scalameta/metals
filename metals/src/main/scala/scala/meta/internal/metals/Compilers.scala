@@ -40,6 +40,7 @@ import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.protopc.ProtoPresentationCompiler
 import scala.meta.internal.semanticdb as s
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.worksheets.WorksheetPcData
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
@@ -1587,6 +1588,34 @@ class Compilers(
         )
       }
     }.getOrElse(Future.successful(DefinitionResult.empty))
+
+  /**
+   * Returns the presentation compiler's information on `symbol`, the SemanticDB
+   * symbol at the position. SemanticDB and the presentation compiler can number
+   * the overloads of a method differently. For an overloaded method, returns
+   * the information on the overload that the presentation compiler finds at the
+   * position. Returns `None` if that is not an overload of `symbol`.
+   */
+  def referencedInfo(
+      params: TextDocumentPositionParams,
+      symbol: String,
+  ): Future[Option[PcSymbolInformation]] = Future.delegate {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    info(path, symbol).flatMap { found =>
+      if (found.exists(_.alternativeSymbols.isEmpty)) Future.successful(found)
+      else if (path.isScalaFilename)
+        definition(params, EmptyCancelToken).flatMap { result =>
+          val referenced = result.symbol
+          if (referenced == symbol) Future.successful(found)
+          else if (
+            referenced.isGlobal && referenced.owner == symbol.owner &&
+            referenced.desc.name == symbol.desc.name
+          ) info(path, referenced)
+          else Future.successful(None)
+        }
+      else Future.successful(None)
+    }
+  }
 
   def locateInsideDecompiledJar(
       symbol: String,
