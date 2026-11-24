@@ -110,6 +110,41 @@ class PcSemanticdbSuite extends BasePCSuite {
     )
   }
 
+  check(
+    "worksheet-toplevel",
+    """|val a = 123
+       |val b = a + 1""".stripMargin,
+    """|val a = 123
+       |val b = a + 1""".stripMargin,
+    filename = "B.worksheet.sc"
+  )
+
+  check(
+    "script-toplevel",
+    """|val x = 123
+       |val y = x + 1""".stripMargin,
+    """|/*local0*/val x/*local1*/ = 123
+       |val y/*local2*/ = x/*local1*/ +/*scala.Int#`+`(+4).*/ 1
+       |""".stripMargin,
+    filename = "B.sc"
+  )
+
+  check(
+    "worksheet-magic-import-toplevel",
+    """|import $dep.`com.lihaoyi::os-lib:0.11.4`
+       |val a = 123
+       |val b = a + 1""".stripMargin,
+    """|import $dep.`com.lihaoyi::os-lib:0.11.4`
+       |val a = 123
+       |val b = a + 1""".stripMargin,
+    filename = "D.worksheet.sc"
+  )
+
+  test("script-diagnostics") {
+    val uri = new URI("file:///C.sc")
+    assertNoDiff(diagnostics(uri, "val a: Int = \"\""), StringNotInt)
+  }
+
   def check(
       name: String,
       original: String,
