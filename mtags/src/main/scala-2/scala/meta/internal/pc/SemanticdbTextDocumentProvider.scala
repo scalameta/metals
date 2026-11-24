@@ -30,6 +30,7 @@ class SemanticdbTextDocumentProvider(
     val unit = addCompilationUnit(
       code = validCode,
       filename = uri.toString(),
+      forceNew = true, // scalac does not report messages of a typed unit again
       cursor = None
     )
     typeCheck(unit)
