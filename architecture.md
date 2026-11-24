@@ -126,9 +126,10 @@ The symbols follow the format of the [`semanticdb-kotlinc`](https://github.com/s
 | Declaration | `KotlinMtags` | `semanticdb-kotlinc` |
 | --- | --- | --- |
 | Getter of `val isEmpty: Boolean` | `isEmpty().` | `getIsEmpty().` |
+| Setter of `var isOn: Boolean` | `setOn().` | `setIsOn().` |
 | Parameter of `annotation class A(val value: String)` | `A#value.`, `A#value().` | `A#value.`, `A#getValue().` |
-| Enum entry `RED` of `enum class Color` | `Color#RED.` | an anonymous object |
+| Enum entry `RED(1)` of `enum class Color(val rgb: Int)` | `Color#RED.` | `` `<anonymous object at N>`# `` |
 
-The setter of `var isOn` is `setOn().`. An explicit getter or setter (`get() = ...`) is at the position of the property name. The index has classes, objects (a nameless companion is `Companion#`), functions, properties with their accessors, type aliases, constructors (also the default one) and enum entries. Class members are in it only with `includeMembers`.
+An explicit getter or setter (`get() = ...`) is on the line of the property name, and `semanticdb-kotlinc` puts it on the line of `get()`. `semanticdb-kotlinc` also indexes the members that the compiler generates, such as `values()` and `entries` of an enum class. The index has classes, objects (a nameless companion is `Companion#`), functions, properties with their accessors, type aliases, constructors (also the default one) and enum entries. Class members are in it only with `includeMembers`.
 
 `KotlinMtagsSuite.scala` and the expect files in `tests/unit/src/test/resources/mtags-kotlin` show which symbols `KotlinMtags` extracts. The symbol format was compared with `semanticdb-kotlinc` 0.6.0 on the Kotlin compiler 2.2.0.
