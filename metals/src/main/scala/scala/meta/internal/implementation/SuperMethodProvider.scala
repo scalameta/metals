@@ -10,9 +10,9 @@ object SuperMethodProvider {
     methodSymbolInformation.overriddenSymbols.headOption.filter(isNonStopSymbol)
 
   def getSuperMethodHierarchy(
-      methodSymbolInformation: SymbolInformation
+      overriddenSymbols: Seq[String]
   ): List[String] = {
-    methodSymbolInformation.overriddenSymbols.filter { sym =>
+    overriddenSymbols.filter { sym =>
       isNonStopSymbol(sym)
     }.toList
   }
