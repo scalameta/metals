@@ -37,7 +37,6 @@ sealed trait BuildServerInitializer {
  * This will take your `metals.json` file and quickly produce `.bloop/` files from it.
  */
 object QuickBuildInitializer extends BuildServerInitializer {
-  this: BaseLspSuite =>
   override def initialize(
       workspace: AbsolutePath,
       server: TestingServer,
@@ -71,7 +70,6 @@ object QuickBuildInitializer extends BuildServerInitializer {
  * run Bloop Install via the build tool being used.
  */
 object BloopImportInitializer extends BuildServerInitializer {
-  this: BaseLspSuite =>
   override def initialize(
       workspace: AbsolutePath,
       server: TestingServer,
@@ -101,7 +99,6 @@ object BloopImportInitializer extends BuildServerInitializer {
  * with sbt as the build server.
  */
 object SbtServerInitializer extends BuildServerInitializer {
-  this: BaseLspSuite =>
   override def initialize(
       workspace: AbsolutePath,
       server: TestingServer,
@@ -183,7 +180,6 @@ object SbtServerInitializer extends BuildServerInitializer {
 }
 
 object MillServerInitializer extends BuildServerInitializer {
-  this: BaseLspSuite =>
   override def initialize(
       workspace: AbsolutePath,
       server: TestingServer,
@@ -209,7 +205,6 @@ object MillServerInitializer extends BuildServerInitializer {
 }
 
 object BazelServerInitializer extends BuildServerInitializer {
-  this: BaseLspSuite =>
   override def initialize(
       workspace: AbsolutePath,
       server: TestingServer,
@@ -238,7 +233,6 @@ object BazelServerInitializer extends BuildServerInitializer {
  * configuration and waits for the MBT BSP session.
  */
 object MbtTestInitializer extends BuildServerInitializer {
-  this: BaseLspSuite =>
   override def initialize(
       workspace: AbsolutePath,
       server: TestingServer,
