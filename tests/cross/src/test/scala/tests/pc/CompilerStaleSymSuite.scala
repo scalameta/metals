@@ -47,7 +47,7 @@ class CompilerStaleSymSuite extends BaseCompletionSuite {
   checkRenamedTopelevel(
     "multiple-requests-backtick",
     "`M Metals M`",
-    (contents, max) => contents.replace(s"Metals M", s"Metals M "),
+    (contents, _) => contents.replace(s"Metals M", s"Metals M "),
     s"""|B example
         |`M Metals M         ` example
         |""".stripMargin
