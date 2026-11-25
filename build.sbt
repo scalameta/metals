@@ -710,9 +710,10 @@ val scala3With213Mtags = mtagsFrom213 ++ Seq(
   excludeDependencies ++= {
     if (!isScala3(CrossVersion.partialVersion(scalaVersion.value))) Nil
     else
-      Seq(
+      // on CI pprint_3 is not on the classpath, so mdoc needs its own pprint_2.13
+      (if (isCI) Nil
+       else Seq(ExclusionRule("com.lihaoyi", "pprint_2.13"))) ++ Seq(
         ExclusionRule("com.lihaoyi", "sourcecode_2.13"),
-        ExclusionRule("com.lihaoyi", "pprint_2.13"),
         ExclusionRule("com.lihaoyi", "fansi_2.13"),
         ExclusionRule("org.scala-lang.modules", "scala-collection-compat_2.13"),
         ExclusionRule("com.outr", "scribe_2.13"),
