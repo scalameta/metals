@@ -47,7 +47,7 @@ object MetalsPlugin extends AutoPlugin {
           "-P:semanticdb:synthetics:on",
           // Don't fail compilation in case of Scalameta crash during SemanticDB generation.
           "-P:semanticdb:failures:warning",
-          s"-P:semanticdb:sourceroot:${(ThisBuild / baseDirectory).value}",
+          s"-P:semanticdb:sourceroot:${SemanticdbPaths.optionPath.value((ThisBuild / baseDirectory).value)}",
         )
     },
     javaSemanticdbEnabled := bspEnabled.value,
@@ -141,8 +141,12 @@ object MetalsPlugin extends AutoPlugin {
       JdkVersion.inferJavaVersion(explicit) match {
         case None => Seq.empty
         case Some(version) =>
-          val sourceRoot = (ThisBuild / baseDirectory).value
-          val targetRoot = (Compile / semanticdbTargetRoot).value
+          val sourceRoot =
+            SemanticdbPaths.optionPath.value((ThisBuild / baseDirectory).value)
+          val targetRoot =
+            SemanticdbPaths.optionPath.value(
+              (Compile / semanticdbTargetRoot).value
+            )
           val pluginOption =
             s"-Xplugin:semanticdb -sourceroot:${sourceRoot} -targetroot:${targetRoot} -build-tool:sbt"
           pluginOption :: exportsFlags(version)

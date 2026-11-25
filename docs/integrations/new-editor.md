@@ -600,6 +600,12 @@ Maximum number of results a single MCP symbol search (`glob-search`,
 `typed-glob-search`) returns. Matches beyond the cap are dropped, and the
 response states that it is partial. Default value is `100`.
 
+### `-Dmetals.max-mcp-compile-diagnostics`
+
+Maximum number of errors and warnings a single MCP compile tool (`compile-file`,
+`compile-module`, `compile-full`) returns. Errors are listed first, and the
+response states how many were left out. Default value is `10`.
+
 ### `-Dbloop.sbt.version`
 
 Version number of the sbt-bloop plugin to use for the "Install build" command.

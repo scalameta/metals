@@ -74,9 +74,8 @@ class PcSemanticdbSuite extends BasePCSuite {
   test("diagnostics-built-twice-worksheet") {
     val uri = new URI("file:///Twice.worksheet.sc")
     val code = "val a: Int = \"\""
-    // the document lacks the diagnostics that the reporter has for a script
-    assertNoDiff(diagnostics(uri, code), "")
-    assertNoDiff(diagnostics(uri, code), "")
+    assertNoDiff(diagnostics(uri, code), StringNotInt)
+    assertNoDiff(diagnostics(uri, code), StringNotInt)
   }
 
   test("diagnostics-after-hover") {
@@ -108,6 +107,43 @@ class PcSemanticdbSuite extends BasePCSuite {
          | found   : Int(1)
          | required: String""".stripMargin
     )
+  }
+
+  check(
+    "worksheet-toplevel",
+    """|val a = 123
+       |val b = a + 1""".stripMargin,
+    """|/*local0*/val a/*local1*/ = 123
+       |val b/*local2*/ = a/*local1*/ +/*scala.Int#`+`(+4).*/ 1
+       |""".stripMargin,
+    filename = "B.worksheet.sc"
+  )
+
+  check(
+    "script-toplevel",
+    """|val x = 123
+       |val y = x + 1""".stripMargin,
+    """|/*local0*/val x/*local1*/ = 123
+       |val y/*local2*/ = x/*local1*/ +/*scala.Int#`+`(+4).*/ 1
+       |""".stripMargin,
+    filename = "B.sc"
+  )
+
+  check(
+    "worksheet-magic-import-toplevel",
+    """|import $dep.`com.lihaoyi::os-lib:0.11.4`
+       |val a = 123
+       |val b = a + 1""".stripMargin,
+    """|/*local0*/import $dep.`com.lihaoyi::os-lib:0.11.4`
+       |val a/*local1*/ = 123
+       |val b/*local2*/ = a/*local1*/ +/*scala.Int#`+`(+4).*/ 1
+       |""".stripMargin,
+    filename = "D.worksheet.sc"
+  )
+
+  test("script-diagnostics") {
+    val uri = new URI("file:///C.sc")
+    assertNoDiff(diagnostics(uri, "val a: Int = \"\""), StringNotInt)
   }
 
   def check(
