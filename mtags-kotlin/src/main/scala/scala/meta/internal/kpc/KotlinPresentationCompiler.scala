@@ -195,7 +195,9 @@ case class KotlinPresentationCompiler(
           .flatMap(ref =>
             Option(s.resolveToSymbol(ReferenceUtilsKt.getMainReference(ref)))
           )
-          .fold(DefinitionResultImpl.empty)(definitionOf(_, snapshot, params))
+          .fold(DefinitionResultImpl.empty)(
+            definitionOf(s, _, snapshot, params)
+          )
       }
     }
 
@@ -217,11 +219,14 @@ case class KotlinPresentationCompiler(
         fromReference
           .orElse(fromDeclaration)
           .collect { case tpe: KaClassType => tpe.getSymbol }
-          .fold(DefinitionResultImpl.empty)(definitionOf(_, snapshot, params))
+          .fold(DefinitionResultImpl.empty)(
+            definitionOf(s, _, snapshot, params)
+          )
       }
     }
 
   private def definitionOf(
+      s: KaSession,
       symbol: KaSymbol,
       snapshot: KotlinCompilerSession#Snapshot,
       params: OffsetParams
@@ -243,10 +248,14 @@ case class KotlinPresentationCompiler(
     }
     val semanticdb = semanticdbSymbol(symbol).getOrElse("")
     // A library symbol has no source here; Metals finds it in the source
-    // jar index.
+    // jar index. The classpath index finds a class file by the owner of the
+    // symbol, so a top-level function also needs its JVM facade symbol.
     val locations = sourceLocation.toList match {
       case Nil if semanticdb.nonEmpty =>
-        search.definition(semanticdb, params.uri()).asScala.toList
+        (semanticdb :: facadeSymbol(s, symbol).toList).iterator
+          .map(sym => search.definition(sym, params.uri()).asScala.toList)
+          .find(_.nonEmpty)
+          .getOrElse(Nil)
       case found => found
     }
     DefinitionResultImpl(semanticdb, locations.asJava)
@@ -268,6 +277,22 @@ case class KotlinPresentationCompiler(
             .getOrElse(packageSymbol(id.getPackageName))
           val suffix = if (c.isInstanceOf[KaFunctionSymbol]) "()." else "."
           owner + encode(id.getCallableName.asString) + suffix
+        }
+      case _ => None
+    }
+
+  /** `pkg/ClientKt#f().` for a top-level `f` in `Client.kt`. */
+  private def facadeSymbol(s: KaSession, symbol: KaSymbol): Option[String] =
+    symbol match {
+      case c: KaCallableSymbol
+          if Option(c.getCallableId).exists(_.getClassId == null) =>
+        for {
+          facade <- Option(s.getContainingJvmClassName(c))
+          member <- semanticdbSymbol(c)
+        } yield {
+          val owner = facade.split('.').map(encode)
+          owner.init.map(_ + "/").mkString + owner.last + "#" +
+            member.substring(member.lastIndexOf('/') + 1)
         }
       case _ => None
     }

@@ -1,16 +1,24 @@
 package kpc
 
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util
 
 import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.kpc.KotlinPresentationCompiler
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.CompilerVirtualFileParams
+import scala.meta.internal.pc.EmptySymbolSearch
+import scala.meta.pc.ParentSymbols
 import scala.meta.pc.PresentationCompiler
+import scala.meta.pc.SymbolSearch
+import scala.meta.pc.SymbolSearchVisitor
+
+import org.eclipse.lsp4j.Location
 
 class KotlinPresentationCompilerSuite extends munit.FunSuite {
 
@@ -492,5 +500,40 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
     syncWith(main + "internal fun secret() = 1\n", v1)
     assertEquals(errors(modelPath, v1 + "\n"), Nil)
     syncWith(main, model)
+  }
+
+  // The classpath definition index finds a class file by the owner of a
+  // symbol, so a library top-level function needs its JVM facade class.
+  test("definition-library-facade-symbol") {
+    val queried = List.newBuilder[String]
+    val search = new SymbolSearch {
+      def definition(symbol: String, source: URI): util.List[Location] = {
+        queried += symbol
+        util.Collections.emptyList()
+      }
+      def documentation(symbol: String, parents: ParentSymbols) =
+        EmptySymbolSearch.documentation(symbol, parents)
+      def definitionSourceToplevels(symbol: String, source: URI) =
+        EmptySymbolSearch.definitionSourceToplevels(symbol, source)
+      def search(query: String, target: String, visitor: SymbolSearchVisitor) =
+        EmptySymbolSearch.search(query, target, visitor)
+      def searchMethods(
+          query: String,
+          target: String,
+          visitor: SymbolSearchVisitor,
+      ) = EmptySymbolSearch.searchMethods(query, target, visitor)
+    }
+    val withSearch = pc.withSearch(search)
+    for (place <- List("case()", "Of(1, 2, 3)", "rintln("))
+      withSearch.definition(at(mainPath, caret(main, place))).get()
+    assertEquals(
+      queried.result(),
+      List(
+        "kotlin/text/uppercase().", "kotlin/text/StringsKt#uppercase().",
+        "kotlin/collections/listOf().",
+        "kotlin/collections/CollectionsKt#listOf().", "kotlin/io/println().",
+        "kotlin/io/ConsoleKt#println().",
+      ),
+    )
   }
 }
