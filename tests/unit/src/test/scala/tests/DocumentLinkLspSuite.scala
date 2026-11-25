@@ -2,8 +2,11 @@ package tests
 
 import scala.concurrent.Future
 
+import com.google.gson.JsonParser
 import munit.Location
 import org.eclipse.lsp4j.DocumentLink
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Range
 
 class DocumentLinkLspSuite extends BaseLspSuite("document-link") {
 
@@ -704,5 +707,95 @@ class DocumentLinkLspSuite extends BaseLspSuite("document-link") {
         s"nested class member link should resolve to Outer.java but got: ${resolvedMember.getTarget}",
       )
     }
+  }
+
+  test("scala-wiki-link-resolve") {
+    val file = "a/src/main/scala/a/Main.scala"
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a":{}}
+           |/a/src/main/scala/a/Helper.scala
+           |package a
+           |
+           |object Helper {
+           |  def doSomething(): Unit = ()
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |/**
+           | * Uses [[a.Helper]] and [[Helper.doSomething the helper]].
+           | */
+           |object Main
+           |""".stripMargin
+      )
+      _ <- server.didOpen(file)
+      links <- server.documentLinks(file)
+      resolved <- Future.sequence(links.map(server.documentLinkResolve))
+    } yield {
+      val helper =
+        workspace.resolve("a/src/main/scala/a/Helper.scala").toURI.toString
+      assertEquals(
+        resolved.map(link => (link.getTooltip, link.getTarget)),
+        List(
+          ("a.Helper", s"$helper#L3"),
+          ("Helper.doSomething", s"$helper#L4"),
+        ),
+      )
+    }
+  }
+
+  test("scala-wiki-link-resolve-after-edit") {
+    val file = "a/src/main/scala/a/Main.scala"
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a":{}}
+           |/a/src/main/scala/a/Helper.scala
+           |package a
+           |
+           |object Helper
+           |
+           |object Other
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |/**
+           | * [[a.Helper]]
+           | * [[a.Other]]
+           | */
+           |object Main
+           |""".stripMargin
+      )
+      _ <- server.didOpen(file)
+      links <- server.documentLinks(file)
+      helperLink = linkWithTooltip(links, "a.Helper")
+      _ <- server.didChange(file)(_.replace(" * [[a.Helper]]\n", ""))
+      resolved <- server.documentLinkResolve(helperLink)
+    } yield assertEquals(resolved.getTarget, null)
+  }
+
+  test("scala-wiki-link-resolve-with-non-file-uri") {
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a":{}}
+           |/a/src/main/scala/a/Helper.scala
+           |package a
+           |
+           |object Helper
+           |""".stripMargin
+      )
+      data = JsonParser.parseString(
+        """{"uri":"untitled:Untitled-1.scala","target":"a.Helper"}"""
+      )
+      link = new DocumentLink(
+        new Range(new Position(0, 4), new Position(0, 12)),
+        null,
+        data,
+      )
+      resolved <- server.documentLinkResolve(link)
+    } yield assertEquals(resolved.getTarget, null)
   }
 }

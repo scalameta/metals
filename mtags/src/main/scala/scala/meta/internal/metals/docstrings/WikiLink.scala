@@ -44,17 +44,20 @@ object WikiLink {
   }
 
   /**
-   * The target of the entity link whose brackets (`[[ ... ]]`, or any `n >= 2`
-   * matching brackets, mirroring the renderer's grammar) enclose `offset`, so
-   * source go-to-definition navigates exactly the links the renderer renders,
-   * including the triple-bracket form the old regex truncated
-   * (scalameta/metals#3383).
+   * An entity link in a text. The link, brackets included, occupies the
+   * half-open range `[start, end)`, and its target begins at `targetStart`.
    */
-  def atOffset(text: String, offset: Int): Option[String] = {
+  final case class Link(start: Int, end: Int, target: String, targetStart: Int)
+
+  /**
+   * The entity links (`[[ ... ]]`, or any `n >= 2` matching brackets,
+   * mirroring the renderer's grammar) in `text`, in source order.
+   */
+  def links(text: String): List[Link] = {
     val n = text.length
+    val result = List.newBuilder[Link]
     var i = 0
-    var result: Option[String] = None
-    while (i < n && result.isEmpty) {
+    while (i < n) {
       if (text.charAt(i) == '[') {
         var open = 0
         while (i + open < n && text.charAt(i + open) == '[') open += 1
@@ -63,19 +66,33 @@ object WikiLink {
           val end = text.indexOf("]" * open, contentStart)
           if (end < 0) i += open
           else {
-            // The link occupies the half-open range `[i, end + open)`; an
-            // inclusive upper bound would let the char right after the closing
-            // brackets (e.g. the opening `[` of an adjacent `[[A]][[B]]`) resolve
-            // to this link (scalameta/metals#3383).
-            if (offset >= i && offset < end + open)
-              result = Some(
-                splitTargetTitle(text.substring(contentStart, end))._1
-              )
+            val content = text.substring(contentStart, end)
+            val target = splitTargetTitle(content)._1
+            result += Link(
+              i,
+              end + open,
+              target,
+              contentStart + content.indexOf(target)
+            )
             i = end + open
           }
         } else i += 1
       } else i += 1
     }
-    result
+    result.result()
   }
+
+  /**
+   * The target of the entity link that encloses `offset`, so source
+   * go-to-definition navigates exactly the links the renderer renders,
+   * including the triple-bracket form the old regex truncated
+   * (scalameta/metals#3383).
+   */
+  def atOffset(text: String, offset: Int): Option[String] =
+    links(text).collectFirst {
+      // The link range is half-open; an inclusive upper bound would let the
+      // char right after the closing brackets (e.g. the opening `[` of an
+      // adjacent `[[A]][[B]]`) resolve to this link (scalameta/metals#3383).
+      case link if offset >= link.start && offset < link.end => link.target
+    }
 }

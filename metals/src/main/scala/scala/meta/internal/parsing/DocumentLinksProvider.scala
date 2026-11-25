@@ -3,19 +3,26 @@ package scala.meta.internal.parsing
 import java.net.URLDecoder
 import java.util
 
+import scala.meta.inputs.Position as MetaPosition
+import scala.meta.internal.docstrings.WikiLink
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
+import scala.meta.tokens.Token.Comment
 
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import org.eclipse.lsp4j.DocumentLink
+import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.lsp4j.TextDocumentPositionParams
 
 /**
- * Provides document links for URLs and Javadoc references in source files.
+ * Provides document links for URLs, Javadoc references and Scaladoc entity
+ * links in source files.
  *
  * @param buffers the file buffers
  * @param definitionProvider optional definition provider for resolving symbols
@@ -45,13 +52,54 @@ final class DocumentLinksProvider(
       .fold[util.List[DocumentLink]](util.Collections.emptyList()) { content =>
         val isJava = filePath.isJava
         val fileUri = filePath.toURI.toString
-        content.linesIterator.zipWithIndex
-          .flatMap { case (line, lineNo) =>
+        val lineLinks = content.linesIterator.zipWithIndex.flatMap {
+          case (line, lineNo) =>
             linksForLine(line, lineNo, fileUri, isJava)
-          }
-          .toSeq
-          .asJava
+        }.toSeq
+        val scaladocLinks =
+          if (filePath.isScalaFilename) scaladocLinksIn(content, fileUri)
+          else Seq.empty
+        (lineLinks ++ scaladocLinks).asJava
       }
+
+  private def scaladocLinksIn(
+      content: String,
+      fileUri: String,
+  ): Seq[DocumentLink] =
+    for {
+      tokens <- content
+        .safeTokenize(Trees.defaultTokenizerDialect)
+        .toOption
+        .toSeq
+      comment <- tokens.collect {
+        case comment: Comment
+            if comment.text.startsWith("/**") && comment.text.endsWith("*/") =>
+          comment
+      }
+      link <- WikiLink.links(comment.text)
+      if isSymbolLink(link, comment.text)
+    } yield {
+      val start = comment.start + link.targetStart
+      val position =
+        MetaPosition.Range(comment.input, start, start + link.target.length)
+      makeScaladocLink(position.toLsp, link.target, fileUri)
+    }
+
+  /**
+   * Whether a Scaladoc link names a symbol on a single line. A link to a URI,
+   * such as `[[https://...]]` or `[[mailto:...]]`, is no symbol: http(s) ones
+   * are left to the URL links, others stay unlinked. A link whose target is
+   * broken across lines would be parsed together with the leading `*` of the
+   * comment's next line, while a title may wrap freely.
+   */
+  private def isSymbolLink(link: WikiLink.Link, commentText: String): Boolean =
+    link.target.nonEmpty &&
+      uriScheme.findPrefixOf(link.target).isEmpty &&
+      !commentText
+        .substring(link.start, link.targetStart + link.target.length)
+        .exists(char => char == '\n' || char == '\r')
+
+  private val uriScheme = "^[a-zA-Z][a-zA-Z0-9+-]*:".r
 
   private def linksForLine(
       line: String,
@@ -139,6 +187,28 @@ final class DocumentLinksProvider(
   }
 
   /**
+   * Creates a DocumentLink for a Scaladoc entity link `[[...]]`. The target is
+   * resolved lazily in the {@code documentLink/resolve} phase, from the
+   * position of the link in the document named by the {@code uri} in data.
+   * The {@code target} in data lets the resolve phase tell whether the
+   * document still has this link at that position.
+   */
+  private def makeScaladocLink(
+      range: Range,
+      target: String,
+      fileUri: String,
+  ): DocumentLink = {
+    val data = new JsonObject()
+    data.addProperty("uri", fileUri)
+    data.addProperty("target", target)
+    val link = new DocumentLink()
+    link.setTooltip(target)
+    link.setData(data)
+    link.setRange(range)
+    link
+  }
+
+  /**
    * Strips trailing punctuation characters that are unlikely to be part of
    * an intentional URL. Handles balanced parentheses/brackets: a closing
    * bracket is only stripped when there is no matching opener in the URL.
@@ -161,17 +231,62 @@ final class DocumentLinksProvider(
 
   /**
    * Resolves a DocumentLink by setting its target URI. For URL links, the
-   * target is already set. For Javadoc reference links, this method looks up
-   * the symbol definition and sets the target to its location.
+   * target is already set. For Javadoc reference links and Scaladoc entity
+   * links, this method looks up the symbol definition and sets the target to
+   * its location.
    */
   def resolve(link: DocumentLink): DocumentLink = {
     Option(link.getTarget) match {
       case Some(_) => link
       case None =>
-        resolveJavadocLink(link)
+        if (dataString(link, "uri").exists(_.isScalaFilename))
+          resolveScaladocLink(link)
+        else resolveJavadocLink(link)
         link
     }
   }
+
+  private def dataString(link: DocumentLink, key: String): Option[String] =
+    for {
+      data <- Option(link.getData).collect { case j: JsonElement =>
+        j.getAsJsonObject
+      }
+      value <- Option(data.get(key))
+    } yield value.getAsString
+
+  private def resolveScaladocLink(link: DocumentLink): Unit =
+    for {
+      provider <- definitionProvider
+      uri <- dataString(link, "uri")
+      path <- uri.toAbsolutePathSafe
+      if isCurrent(link, path, uri)
+      params = new TextDocumentPositionParams(
+        new TextDocumentIdentifier(uri),
+        link.getRange.getStart,
+      )
+      result <- provider.scaladocDefinition(path, params)
+      location <- result.locations.asScala.headOption
+    } link.setTarget(locationTarget(location))
+
+  /**
+   * Whether the document still has the Scaladoc link at the link's range, so
+   * that a link left over from before an edit resolves to nothing instead of
+   * to whatever moved under its range.
+   */
+  private def isCurrent(
+      link: DocumentLink,
+      path: AbsolutePath,
+      uri: String,
+  ): Boolean =
+    buffers.get(path).exists { content =>
+      scaladocLinksIn(content, uri).exists { current =>
+        current.getRange == link.getRange &&
+        dataString(current, "target") == dataString(link, "target")
+      }
+    }
+
+  private def locationTarget(location: Location): String =
+    s"${location.getUri}#L${location.getRange.getStart.getLine + 1}"
 
   private val importRegex = raw"import\s+([\w.]+);".r
 
@@ -195,11 +310,8 @@ final class DocumentLinksProvider(
 
   private def resolveJavadocLink(link: DocumentLink): Unit =
     for {
-      data <- Option(link.getData).collect { case j: JsonElement =>
-        j.getAsJsonObject
-      }
-      symbol <- Option(data.get("symbol")).map(_.getAsString)
-      uri <- Option(data.get("uri")).map(_.getAsString)
+      symbol <- dataString(link, "symbol")
+      uri <- dataString(link, "uri")
     } {
       val path = uri.toAbsolutePath
       val symbolCandidates = javadocRefToSemanticdbSymbols(symbol, uri)
@@ -221,7 +333,7 @@ final class DocumentLinksProvider(
       val locations = locationsFromDefinition.map(_.asScala).getOrElse(Nil)
 
       locations.foreach { loc =>
-        link.setTarget(s"${loc.getUri}#L${loc.getRange.getStart.getLine + 1}")
+        link.setTarget(locationTarget(loc))
       }
     }
 

@@ -324,6 +324,146 @@ class DocumentLinksProviderSuite extends BaseSuite {
     assertEquals(links(1).getTooltip, "com.example.Bar")
   }
 
+  test("scala-wiki-link-range-and-data") {
+    val buffers = new Buffers()
+    val path = workspace.resolve("App.scala")
+    val content =
+      """|package a
+         |
+         |/**
+         | * Uses [[a.Helper]] and
+         | * [[scala.Double the number]].
+         | */
+         |class App
+         |""".stripMargin
+    buffers.put(path, content)
+    val provider = new DocumentLinksProvider(buffers, None)
+    val links = provider.getLinks(path).asScala.toList
+
+    assertEquals(
+      links.map(link => (link.getRange, link.getTooltip, link.getTarget)),
+      List(
+        (range(3, 10, 18), "a.Helper", null),
+        (range(4, 5, 17), "scala.Double", null),
+      ),
+    )
+    links.foreach(link =>
+      assertEquals(dataUri(link), Some(path.toURI.toString))
+    )
+  }
+
+  test("scala-wiki-link-only-in-scaladoc") {
+    val buffers = new Buffers()
+    val path = workspace.resolve("App.scala")
+    val content =
+      """|// [[a.LineComment]]
+         |/* [[a.BlockComment]] */
+         |/** [[a.Scaladoc]] */
+         |class App {
+         |  val s = "[[a.StringLiteral]]"
+         |}
+         |""".stripMargin
+    buffers.put(path, content)
+    val provider = new DocumentLinksProvider(buffers, None)
+    val links = provider.getLinks(path).asScala.toList
+
+    assertEquals(links.map(_.getTooltip), List("a.Scaladoc"))
+  }
+
+  test("scala-wiki-link-url-left-to-url-link") {
+    val buffers = new Buffers()
+    val path = workspace.resolve("App.scala")
+    val content =
+      """|/** See [[https://example.com]] and [[https://x.y/z the docs]]. */
+         |class App
+         |""".stripMargin
+    buffers.put(path, content)
+    val provider = new DocumentLinksProvider(buffers, None)
+    val links = provider.getLinks(path).asScala.toList
+
+    assertEquals(
+      links.map(_.getTarget),
+      List("https://example.com", "https://x.y/z"),
+    )
+  }
+
+  test("scala-wiki-link-across-lines-skipped") {
+    val buffers = new Buffers()
+    val path = workspace.resolve("App.scala")
+    val content =
+      """|/** See [[
+         | *   scala.Option]] and [[a.B]] */
+         |class App
+         |""".stripMargin
+    buffers.put(path, content)
+    val provider = new DocumentLinksProvider(buffers, None)
+    val links = provider.getLinks(path).asScala.toList
+
+    assertEquals(links.map(_.getTooltip), List("a.B"))
+  }
+
+  test("scala-wiki-link-with-uri-scheme-skipped") {
+    val buffers = new Buffers()
+    val path = workspace.resolve("App.scala")
+    val content =
+      """|/** [[ftp://x.org/f]] [[mailto:a@b.c]] [[HTTP://X.ORG]] [[file:///tmp/x]]
+         | * [[http.Client]] [[List.::]] [[foo(x:Int)*]] */
+         |class App
+         |""".stripMargin
+    buffers.put(path, content)
+    val provider = new DocumentLinksProvider(buffers, None)
+    val links = provider.getLinks(path).asScala.toList
+
+    assertEquals(
+      links.map(_.getTooltip),
+      List("http.Client", "List.::", "foo(x:Int)*"),
+    )
+  }
+
+  test("scala-wiki-link-with-title-across-lines") {
+    val buffers = new Buffers()
+    val path = workspace.resolve("App.scala")
+    val content =
+      """|/** See [[a.B the
+         | * title]] and [[a.C]]. */
+         |class App
+         |""".stripMargin
+    buffers.put(path, content)
+    val provider = new DocumentLinksProvider(buffers, None)
+    val links = provider.getLinks(path).asScala.toList
+
+    assertEquals(links.map(_.getTooltip), List("a.B", "a.C"))
+  }
+
+  test("scala-wiki-link-in-code-block") {
+    val buffers = new Buffers()
+    val path = workspace.resolve("App.scala")
+    val content =
+      """|/** Uses [[a.B]].
+         | * {{{
+         | *   val d = [[a.D]]
+         | * }}}
+         | * And [[a.C]].
+         | */
+         |class App
+         |""".stripMargin
+    buffers.put(path, content)
+    val provider = new DocumentLinksProvider(buffers, None)
+    val links = provider.getLinks(path).asScala.toList
+
+    assertEquals(links.map(_.getTooltip), List("a.B", "a.D", "a.C"))
+  }
+
+  test("resolve-link-with-non-file-uri") {
+    val provider = new DocumentLinksProvider(new Buffers(), None)
+    val data = new JsonObject()
+    data.addProperty("uri", "untitled:Untitled-1")
+    val link = new DocumentLink(range(0, 0, 3))
+    link.setData(data)
+
+    assertEquals(provider.resolve(link).getTarget, null)
+  }
+
   test("resolve-url-link-unchanged") {
     val buffers = new Buffers()
     val provider = new DocumentLinksProvider(buffers, None)
@@ -380,6 +520,17 @@ object DocumentLinksProviderSuite {
     result.setTooltip(tooltip)
     result
   }
+
+  def range(line: Int, start: Int, end: Int): lsp4j.Range =
+    new lsp4j.Range(
+      new lsp4j.Position(line, start),
+      new lsp4j.Position(line, end),
+    )
+
+  def dataUri(link: DocumentLink): Option[String] =
+    Option(link.getData).collect { case obj: JsonObject =>
+      obj.get("uri").getAsString
+    }
 
   def assertJavadocData(link: DocumentLink, expectedSymbol: String): Unit = {
     assert(link.getData != null, "data must not be null")
