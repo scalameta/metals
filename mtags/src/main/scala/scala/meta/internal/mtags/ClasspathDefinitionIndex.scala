@@ -14,6 +14,7 @@ import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 
+import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.FieldVisitor
@@ -44,11 +45,24 @@ class ClasspathDefinitionIndex(mtags: () => Mtags, dialect: Dialect) {
   def definitions(
       symbol: Symbol
   ): List[(DependencyModule, SymbolDefinition)] = {
+    val all = candidates(symbol)
+    // Every part of a Kotlin multifile facade declares the facade class, so a
+    // part without the member still matches by its owner.
+    val exact = all.filter { case (_, d) => d.definitionSymbol == symbol }
+    val kotlinOnly = all.forall { case (_, d) =>
+      d.path.toNIO.toString.endsWith(".kt")
+    }
+    if (exact.nonEmpty && kotlinOnly) exact else all
+  }
+
+  private def candidates(
+      symbol: Symbol
+  ): List[(DependencyModule, SymbolDefinition)] = {
     val toplevel = symbol.enclosingPackage
     for {
       (module, packages) <- declaredPackagesByJar.iterator
       if packages.contains(toplevel.value)
-      filename <- classfileSourceName(module, symbol).toList
+      filename <- classfileSourceNames(module, symbol)
       // Iterate through *all* files with a matching name, ignoring the package
       // name.  If a file has 100s of "package.scala" files, then we index them
       // all here, which could be inefficient and might be worth optimizing in
@@ -112,25 +126,39 @@ class ClasspathDefinitionIndex(mtags: () => Mtags, dialect: Dialect) {
         }
     }
   }
-  private def classfileSourceName(
+
+  /**
+   * The source file names of the toplevel class of `symbol`. A Kotlin
+   * multifile facade class (`@JvmMultifileClass`) has no source file of its
+   * own, so the names come from its part classes.
+   */
+  private def classfileSourceNames(
       module: DependencyModule,
       symbol: Symbol
-  ): Option[String] = {
+  ): List[String] = {
     val jar = new JarFile(module.jar.toFile)
-    val classfileName = s"${symbol.toplevelBinaryName}.class"
-    try {
-      val entry = jar.getEntry(classfileName)
-      if (entry != null) {
+    def read(className: String): Option[ClassfileSourceExtractor] =
+      Option(jar.getEntry(s"$className.class")).map { entry =>
         val in = jar.getInputStream(entry)
         val visitor = new ClassfileSourceExtractor()
-        new ClassReader(in).accept(
-          visitor,
-          ClassReader.SKIP_CODE | ClassReader.SKIP_FRAMES
-        )
-        visitor.source
-      } else {
-        None
+        try
+          new ClassReader(in).accept(
+            visitor,
+            ClassReader.SKIP_CODE | ClassReader.SKIP_FRAMES
+          )
+        finally in.close()
+        visitor
       }
+    try {
+      read(symbol.toplevelBinaryName).toList.flatMap { toplevel =>
+        toplevel.source match {
+          case Some(source) => List(source)
+          case None =>
+            toplevel.multifileParts.flatMap(part =>
+              read(part).flatMap(_.source)
+            )
+        }
+      }.distinct
     } finally {
       jar.close()
     }
@@ -173,9 +201,33 @@ class ClasspathDefinitionIndex(mtags: () => Mtags, dialect: Dialect) {
   private final class ClassfileSourceExtractor
       extends ClassVisitor(Opcodes.ASM9) {
     var source: Option[String] = None
+    // The part classes of a Kotlin multifile facade: `kotlin.Metadata` with
+    // kind 4 lists their internal names in `d1`.
+    var multifileParts: List[String] = Nil
     override def visitSource(source: String, debug: String): Unit = {
       this.source = Some(source)
     }
+    override def visitAnnotation(
+        descriptor: String,
+        visible: Boolean
+    ): AnnotationVisitor =
+      if (descriptor != "Lkotlin/Metadata;") null
+      else
+        new AnnotationVisitor(Opcodes.ASM9) {
+          private var kind = 0
+          private val data = List.newBuilder[String]
+          override def visit(name: String, value: Any): Unit =
+            if (name == "k") kind = value.asInstanceOf[Int]
+          override def visitArray(name: String): AnnotationVisitor =
+            if (name != "d1") null
+            else
+              new AnnotationVisitor(Opcodes.ASM9) {
+                override def visit(name: String, value: Any): Unit =
+                  data += value.toString
+              }
+          override def visitEnd(): Unit =
+            if (kind == 4) multifileParts = data.result()
+        }
     override def visitField(
         access: Int,
         name: String,

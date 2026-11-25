@@ -8,6 +8,7 @@ import scala.meta.internal.mtags.ClasspathDefinitionIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
 
+import coursierapi.Dependency
 import munit.AnyFixture
 import tests.Library
 import tests.LibraryFixture
@@ -15,7 +16,16 @@ class ClasspathDefinitionIndexSuite extends munit.FunSuite {
   val xnio = new LibraryFixture("xnio", () => Library.xnio)
   val xnio2 = new LibraryFixture("xnio2", () => Library.xnio2)
   val scala2 = new LibraryFixture("scala2", () => Library.allScala2Library)
-  override def munitFixtures: Seq[AnyFixture[?]] = List(xnio, xnio2, scala2)
+  val kotlinStdlib = new LibraryFixture(
+    "kotlin-stdlib",
+    () =>
+      Library.fetchSources(
+        "kotlin-stdlib",
+        List(Dependency.of("org.jetbrains.kotlin", "kotlin-stdlib", "2.3.0")),
+      ),
+  )
+  override def munitFixtures: Seq[AnyFixture[?]] =
+    List(xnio, xnio2, scala2, kotlinStdlib)
   def defaultLibs: Library = xnio() ++ scala2()
   val buffers: Buffers = Buffers()
 
@@ -76,5 +86,30 @@ class ClasspathDefinitionIndexSuite extends munit.FunSuite {
        |final case class Left[+A, +B](value: A) extends Either[A, B] {
        |                              ^
        |""".stripMargin,
+  )
+
+  // A Kotlin top-level function is a static method of its file's JVM facade.
+  checkDefinition(
+    "kotlin-file-facade",
+    "kotlin/io/ConsoleKt#println().",
+    """|/jvmMain/kotlin/io/Console.kt org.jetbrains.kotlin:kotlin-stdlib:2.3.0
+       |public actual inline fun println(message: Any?) {
+       |                         ^
+       |""".stripMargin,
+    libs = () => kotlinStdlib(),
+  )
+
+  // A multifile facade has no SourceFile; its parts have one.
+  checkDefinition(
+    "kotlin-multifile-facade",
+    "kotlin/text/StringsKt#uppercase().",
+    """|/commonMain/kotlin/text/Strings.kt org.jetbrains.kotlin:kotlin-stdlib:2.3.0
+       |public expect fun String.uppercase(): String
+       |                         ^
+       |/jvmMain/kotlin/text/StringsJVM.kt org.jetbrains.kotlin:kotlin-stdlib:2.3.0
+       |public actual inline fun String.uppercase(): String = (this as java.lang.String).toUpperCase(Locale.ROOT)
+       |                                ^
+       |""".stripMargin,
+    libs = () => kotlinStdlib(),
   )
 }
