@@ -166,7 +166,7 @@ class WorksheetProvider(
     evaluateAndPublish(
       path,
       token,
-      _.foreach { toPublish =>
+      _.foreach { _ =>
         if (clientConfig.isInlayHintsRefreshEnabled())
           languageClient.refreshInlayHints()
       },
@@ -378,7 +378,7 @@ class WorksheetProvider(
       }
     }
     new Cancelable {
-      def cancel() =
+      def cancel(): Unit =
         if (thread.isAlive()) {
           // Canceling a running program. first line of
           // defense is `Thread.interrupt()`. Fingers crossed it's enough.

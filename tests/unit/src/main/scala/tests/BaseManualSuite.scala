@@ -61,7 +61,7 @@ abstract class BaseManualSuite extends munit.FunSuite {
       onSetup: AbsolutePath => Unit = _ => (),
   ): FunFixture[(TestingServer, TestingClient)] =
     FunFixture.async[(TestingServer, TestingClient)](
-      setup = { test =>
+      setup = { _ =>
         val buffers = Buffers()
         val workspace = AbsolutePath(path)
         onSetup(workspace)

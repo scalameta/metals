@@ -107,7 +107,7 @@ trait MetalsMcpTools extends Cancelable {
 
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, _) =>
+      withErrorHandling { (_, _) =>
         connectionProvider
           .slowConnectToBuildServer(forceImport = true, TaskProgress.empty)
           .map {
@@ -158,7 +158,7 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, _) =>
+      withErrorHandling { (_, _) =>
         val allTargets = buildTargets.allBuildTargetIds
         if (allTargets.isEmpty)
           Future
@@ -218,7 +218,7 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withErrorHandling { (_, arguments) =>
         val path = arguments.getFileInFocus
         if (path.exists) {
           compilations
@@ -320,7 +320,7 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withErrorHandling { (_, arguments) =>
         val module = arguments.getAs[String]("module")
         val targets = (buildTargets.allScala ++ buildTargets.allJava).toList
         targets.find(_.displayName == module) match {
@@ -448,7 +448,7 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withErrorHandling { (_, arguments) =>
         val testClass = arguments.getAs[String]("testClass")
         val optPath = arguments
           .getOptAs[String]("testFile")
@@ -511,7 +511,7 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withErrorHandling { (_, arguments) =>
         val query = arguments.getAs[String]("query")
         indexingPromise.future.flatMap { _ =>
           queryEngine
@@ -560,7 +560,7 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withErrorHandling { (_, arguments) =>
         val query = arguments.getAs[String]("query")
         val symbolTypes = arguments.getAsList[String]("symbolType")
 
@@ -632,7 +632,7 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withErrorHandling { (_, arguments) =>
         val fqcn = arguments.getFqcn
         val pathOpt = arguments.getFileInFocusOpt
         val moduleOpt = arguments.getOptNoEmptyString("module")
@@ -691,7 +691,7 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withErrorHandling { (_, arguments) =>
         val fqcn = arguments.getFqcn
         val pathOpt = arguments.getFileInFocusOpt
         val moduleOpt = arguments.getOptNoEmptyString("module")
@@ -752,7 +752,7 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withErrorHandling { (_, arguments) =>
         val fqcn = arguments.getFqcn
         val pathOpt = arguments.getFileInFocusOpt
         val moduleOpt = arguments.getOptNoEmptyString("module")
@@ -815,7 +815,7 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withErrorHandling { (_, arguments) =>
         val org = arguments.getOptNoEmptyString(FindDepKey.organization)
         val name = arguments.getOptNoEmptyString(FindDepKey.name)
         val version = arguments.getOptNoEmptyString(FindDepKey.version)

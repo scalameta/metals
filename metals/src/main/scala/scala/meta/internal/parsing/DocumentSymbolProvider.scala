@@ -135,7 +135,7 @@ final class DocumentSymbolProvider(
     val result = for {
       tree <- trees.get(path)
     } yield {
-      implicit val dialect = tree.origin match {
+      implicit val dialect: Dialect = tree.origin match {
         case parsed: Origin.Parsed => parsed.dialect
         case Origin.None => dialects.Scala213
         case _ => dialects.Scala213

@@ -116,7 +116,7 @@ final case class CallHierarchyProvider(
   )(implicit ec: ExecutionContext): Future[List[CallHierarchyIncomingCall]] =
     workDoneProgress.trackProgressFuture(
       "Resolving incoming calls",
-      { taskProgress =>
+      { _ =>
         val uri = new TextDocumentIdentifier(params.getItem.getUri)
         val info = getInfo(params.getItem().getData())
         val allReferences = mbtReferenceProvider.references(

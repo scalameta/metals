@@ -148,7 +148,7 @@ class MbtReferenceProvider(
   ): Future[ImplementationsResult[l.Location]] = implementations(
     params.getTextDocument.getUri.toAbsolutePath,
     params.getPosition(),
-    createOutput = (location, info) => location,
+    createOutput = (location, _) => location,
   )
 
   def implementations[T](

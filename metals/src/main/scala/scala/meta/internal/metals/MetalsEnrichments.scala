@@ -1033,7 +1033,7 @@ object MetalsEnrichments
       )
 
       if (isVirtualDocumentSupported)
-        Option(diag.getCode()).foreach { code =>
+        Option(diag.getCode()).foreach { _ =>
           ld.setCode("Explain the error")
           ld.setCodeDescription(
             new l.DiagnosticCodeDescription(explainUrl.toString())
