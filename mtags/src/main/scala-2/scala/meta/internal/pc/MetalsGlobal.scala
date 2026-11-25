@@ -830,6 +830,7 @@ class MetalsGlobal(
       }
     }
     richCompilationCache.remove(uriString)
+    fullyCompiled.remove(uriString) // cleared, don't reuse in a later request
   }
 
   private def remove(filename: String): Unit = {
