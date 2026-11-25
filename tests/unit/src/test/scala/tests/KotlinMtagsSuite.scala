@@ -522,4 +522,30 @@ class KotlinMtagsSuite extends munit.FunSuite {
       List("a/ok().", "a/s.", "a/getS()."),
     )
   }
+
+  test("type-on-next-line-after-colon") {
+    assertEquals(
+      definitions(
+        """|package a
+           |class C<T> where T :
+           |    Any {
+           |  fun member() {}
+           |}
+           |fun after() = 1
+           |""".stripMargin
+      ),
+      List("a/C#", "a/C#member().", "a/C#`<init>`().", "a/after()."),
+    )
+    // A property type that the user has yet to type.
+    assertEquals(
+      definitions(
+        """|package a
+           |val unfinished:
+           |enum class E { RED }
+           |""".stripMargin
+      ),
+      List("a/unfinished.", "a/getUnfinished().", "a/E#", "a/E#RED.",
+        "a/E#`<init>`()."),
+    )
+  }
 }

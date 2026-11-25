@@ -115,7 +115,6 @@ The endpoints is `scala.meta.internal.mtags.Mtags`, which dispatches to several 
   - The unit test (`ScalaToplevelSuite.scala`) is a good resource to see which symbols it extracts.
 - `JavaMtags` parses the given Java file using `qdox`.
 - `JavaToplevelMtags` tokenize and parses Java code in the same way as `ScalaToplevelMtags`. We use our own custom tokenizer and parser instead of `qdox` for fast indexing.
-- `KotlinMtags` indexes Kotlin files. See [Kotlin](#kotlin).
 
 ## Kotlin
 
@@ -131,6 +130,6 @@ The symbols follow the format of the [`semanticdb-kotlinc`](https://github.com/s
 | Parameter of `annotation class A(val value: String)` | `A#value.`, `A#value().` | `A#value.`, `A#getValue().` |
 | Enum entry `RED(1)` of `enum class Color(val rgb: Int)` | `Color#RED.` | `` `<anonymous object at N>`# `` |
 
-A top-level function or property is also a static member of its JVM facade class, `ClientKt#` or the class that `@file:JvmName` names. `includeJvmFacade` is true by default; set it to false to remove these symbols. An explicit getter or setter (`get() = ...`) is on the line of the property name, and `semanticdb-kotlinc` puts it on the line of `get()`. `semanticdb-kotlinc` also indexes the members that the compiler generates, such as `values()` and `entries` of an enum class. The index has classes, objects (a nameless companion is `Companion#`), JVM facade classes, functions, properties with their accessors, type aliases, constructors (also the default one) and enum entries. Members of classes and objects are in it only with `includeMembers`. The members of a JVM facade class are always in it.
+A top-level function or property is also a static member of its JVM facade class, `ClientKt#` or the class that `@file:JvmName` names. A function or accessor that `@JvmName` renames keeps its Kotlin name in the facade. `includeJvmFacade` is true by default; set it to false to remove these symbols. An explicit getter or setter (`get() = ...`) is on the line of the property name, and `semanticdb-kotlinc` puts it on the line of `get()`. `semanticdb-kotlinc` also indexes the members that the compiler generates, such as `values()` and `entries` of an enum class. The index has classes, objects (a nameless companion is `Companion#`), JVM facade classes, functions, properties with their accessors, type aliases, constructors (also the default one) and enum entries. Members of classes and objects are in it only with `includeMembers`. The members of a JVM facade class are always in it.
 
 `KotlinMtagsSuite.scala` and the expect files in `tests/unit/src/test/resources/mtags-kotlin` show which symbols `KotlinMtags` extracts. The symbol format was compared with `semanticdb-kotlinc` 0.6.0 on the Kotlin compiler 2.2.0.

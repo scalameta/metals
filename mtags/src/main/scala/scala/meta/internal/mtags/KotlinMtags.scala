@@ -773,7 +773,11 @@ class KotlinMtags(
           next()
         case Token.Sym('-', _) => next() // `->`
         case Token.Sym('>', _) if isSym(previous, '-') => next()
-        case _: Token.Ident if !peek().newlineBefore || isSym(previous, '.') =>
+        // After `.` or `:`, a name on the next line is still part of the
+        // type, unless it starts the next declaration (`val x:` while typing).
+        case id: Token.Ident
+            if !id.newlineBefore || isSym(previous, '.') ||
+              (isSym(previous, ':') && !startsDeclaration(id)) =>
           next()
         case Token.Keyword("in", _) => next()
         case _ => continue = false
