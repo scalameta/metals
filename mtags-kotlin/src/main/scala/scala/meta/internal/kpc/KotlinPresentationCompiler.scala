@@ -378,15 +378,20 @@ case class KotlinPresentationCompiler(
       matches: Name => Boolean
   ): List[CompletionItem] = {
     val receiverType = Option(s.getExpressionType(receiver))
+    val visible =
+      s.createUseSiteVisibilityChecker(s.getSymbol(file), receiver, ref)
     val memberItems = for {
       tpe <- receiverType.toList
       scope <- Option(s.getScope(tpe)).toList
       signature <- Kt.toList(scope.getCallableSignatures(Kt.predicate(matches)))
-    } yield callableItem(s, signature.getSymbol.asInstanceOf[KaCallableSymbol])
+      symbol = signature.getSymbol.asInstanceOf[KaCallableSymbol]
+      if visible.isVisible(symbol)
+    } yield callableItem(s, symbol)
     val checker = s.createExtensionCandidateChecker(file, ref, receiver)
     val extensionItems = for {
       callable <- callables(s, file, scopesAt(s, file, ref), matches)
-      if callable.isExtension && isApplicable(checker, callable)
+      if callable.isExtension && isApplicable(checker, callable) &&
+        visible.isVisible(callable)
     } yield callableItem(s, callable)
     memberItems ++ extensionItems
   }
@@ -459,10 +464,12 @@ case class KotlinPresentationCompiler(
     // Without a receiver, an extension applies to an implicit receiver, such
     // as `this` in `x.run { ... }`.
     val checker = s.createExtensionCandidateChecker(file, ref, null)
+    val visible = s.createUseSiteVisibilityChecker(s.getSymbol(file), null, ref)
     callables(s, file, scopes, matches)
       .filter(c => !c.isExtension || isApplicable(checker, c))
+      .filter(visible.isVisible(_))
       .map(callableItem(s, _)) ++
-      classifiers.map(classifierItem(_))
+      classifiers.filter(visible.isVisible(_)).map(classifierItem(_))
   }
 
   private def isApplicable(

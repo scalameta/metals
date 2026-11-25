@@ -536,4 +536,15 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
       ),
     )
   }
+
+  test("completion-hides-private-members") {
+    val v1 = model.replace(
+      "  fun isAdult()",
+      "  private fun isSecret() = true\n  fun isAdult()",
+    )
+    syncWith(main, v1)
+    val text = main.replace("  val sb", "  u.is@@\n  val sb")
+    assertEquals(completions(text), List("isAdult"))
+    syncWith(main, model)
+  }
 }
