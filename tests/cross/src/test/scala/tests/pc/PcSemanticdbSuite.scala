@@ -92,8 +92,8 @@ class PcSemanticdbSuite extends BasePCSuite {
   test("diagnostics-built-twice-worksheet") {
     val uri = new URI("file:///Twice.worksheet.sc")
     val code = "val a: Int = \"\""
-    assertNoDiff(diagnostics(uri, code), "")
-    assertNoDiff(diagnostics(uri, code), "")
+    assertNoDiff(diagnostics(uri, code), StringNotInt)
+    assertNoDiff(diagnostics(uri, code), StringNotInt)
   }
 
   test("diagnostics-after-hover") {
@@ -132,7 +132,11 @@ class PcSemanticdbSuite extends BasePCSuite {
     """|val a = 123
        |val b = a + 1""".stripMargin,
     """|   val a = 123
-       |   val b = a + 1
+       |// ^ definition local0
+       |//     ^ definition local1
+       |   val b = a + 1//     ^ definition local2
+       |//         ^ reference local1
+       |//           ^ reference scala/Int#`+`(+4).
        |""".stripMargin,
     filename = "B.worksheet.sc"
   )
@@ -157,8 +161,12 @@ class PcSemanticdbSuite extends BasePCSuite {
        |val a = 123
        |val b = a + 1""".stripMargin,
     """|   import $dep.`com.lihaoyi::os-lib:0.11.4`
+       |// ^ definition local0
        |   val a = 123
-       |   val b = a + 1
+       |//     ^ definition local1
+       |   val b = a + 1//     ^ definition local2
+       |//         ^ reference local1
+       |//           ^ reference scala/Int#`+`(+4).
        |""".stripMargin,
     filename = "D.worksheet.sc"
   )
