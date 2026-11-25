@@ -12,6 +12,7 @@ import scala.concurrent.duration.Duration
 
 import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.JdkSources
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.TestFrameworkUtils
 import scala.meta.internal.metals.debug.server.BuildToolDebugAdapter
@@ -39,6 +40,7 @@ class MbtDebugSessionStarter(
     buildTargetClasses: BuildTargetClasses,
     testProvider: TestSuitesProvider,
     debuggeeGracePeriodSeconds: Long = 60L,
+    debugServerStartTimeoutSeconds: Int = 60,
 )(implicit ec: ExecutionContext) {
 
   def start(
@@ -241,6 +243,44 @@ class MbtDebugSessionStarter(
     }
   }
 
+  private def compileForDebug(
+      target: MbtTarget,
+      workspace: AbsolutePath,
+      cancel: Promise[Unit],
+  ): Future[Unit] =
+    compile(target, workspace, scribe.info(_), scribe.warn(_), cancel).flatMap {
+      exitCode =>
+        if (cancel.isCompleted)
+          Future.failed(
+            new CancellationException("MBT debug session cancelled")
+          )
+        else if (exitCode != 0)
+          Future.failed(
+            new IllegalStateException(
+              s"MBT compile failed for ${target.name} (exit code $exitCode)"
+            )
+          )
+        else Future.unit
+    }
+
+  private def startAfterCompilation(
+      target: MbtTarget,
+      workspace: AbsolutePath,
+      cancel: Promise[Unit],
+  )(start: => Future[URI]): Future[URI] =
+    compileForDebug(target, workspace, cancel).flatMap { _ =>
+      start
+        .withTimeout(
+          debugServerStartTimeoutSeconds,
+          TimeUnit.SECONDS,
+          Some("starting the debug sessions"),
+        )
+        .recoverWith { case exception =>
+          cancel.trySuccess(())
+          Future.failed(exception)
+        }
+    }
+
   private def launchVia(
       launcher: MbtDebugLauncher,
       target: MbtTarget,
@@ -255,43 +295,44 @@ class MbtDebugSessionStarter(
       MbtDebugLauncher.DebugAgentFlag,
     )
     val toolName = launcher.executableName
-    compile(target, workspace, scribe.info(_), scribe.warn(_), cancel).flatMap {
-      _ =>
-        if (cancel.isCompleted)
-          Future.failed(
-            new CancellationException("MBT debug session cancelled")
-          )
-        else
-          debugConfigCreator.create(
-            target.id,
-            cancel,
-            isTests = false,
-          ) match {
-            case Left(error) => Future.failed(new IllegalStateException(error))
-            case Right(projectFuture) =>
-              projectFuture.map { project =>
-                val patched =
-                  patchProjectForRun(project, target, workspace, toolName)
-                scribe.info(
-                  s"MBT debug session via $toolName: ${redactedCommand(command)}"
-                )
-                val debuggee = new BuildToolDebugAdapter(
-                  Future.successful(command),
-                  workspace,
-                  env = javaHomeEnv(target),
-                  patched,
-                  userJavaHome(),
-                )
-                val handler = dap.DebugServer.run(
-                  debuggee,
-                  new MetalsDebugToolsResolver(),
-                  new DebugLogger(),
-                  gracePeriod =
-                    Duration(debuggeeGracePeriodSeconds, TimeUnit.SECONDS),
-                )
-                handler.uri
-              }
-          }
+    startAfterCompilation(target, workspace, cancel) {
+      if (cancel.isCompleted)
+        Future.failed(
+          new CancellationException("MBT debug session cancelled")
+        )
+      else
+        debugConfigCreator.create(
+          target.id,
+          cancel,
+          isTests = false,
+        ) match {
+          case Left(error) => Future.failed(new IllegalStateException(error))
+          case Right(projectFuture) =>
+            projectFuture.map { project =>
+              if (cancel.isCompleted)
+                throw new CancellationException("MBT debug session cancelled")
+              val patched =
+                patchProjectForRun(project, target, workspace, toolName)
+              scribe.info(
+                s"MBT debug session via $toolName: ${redactedCommand(command)}"
+              )
+              val debuggee = new BuildToolDebugAdapter(
+                Future.successful(command),
+                workspace,
+                env = javaHomeEnv(target),
+                patched,
+                userJavaHome(),
+              )
+              val handler = dap.DebugServer.run(
+                debuggee,
+                new MetalsDebugToolsResolver(),
+                new DebugLogger(),
+                gracePeriod =
+                  Duration(debuggeeGracePeriodSeconds, TimeUnit.SECONDS),
+              )
+              handler.uri
+            }
+        }
     }
   }
 
@@ -304,100 +345,101 @@ class MbtDebugSessionStarter(
   ): Future[URI] = {
     val toolName = launcher.executableName
     val sourceFiles = resolveSourceFiles(target, testSuites)
-    compile(target, workspace, scribe.info(_), scribe.warn(_), cancel).flatMap {
-      _ =>
-        if (cancel.isCompleted)
-          Future.failed(
-            new CancellationException("MBT debug session cancelled")
-          )
-        else
-          debugConfigCreator.create(
-            target.id,
-            cancel,
-            isTests = true,
-          ) match {
-            case Left(error) => Future.failed(new IllegalStateException(error))
-            case Right(projectFuture) =>
-              projectFuture.map { project =>
-                val patched =
-                  patchProjectForRun(
-                    project,
-                    target,
-                    workspace,
-                    toolName,
-                    isTests = true,
-                  )
-                val reportReader =
-                  new AtomicReference[() => MbtTestReport](() =>
-                    MbtTestReport.empty
-                  )
-                def arguments(
-                    command: Future[MbtTestCommand],
-                    suffix: String,
-                ): Future[List[String]] =
-                  command.map { testCommand =>
-                    reportReader.set(testCommand.consumeReport)
-                    scribe.info(
-                      s"MBT test debug session via $toolName$suffix: ${redactedCommand(testCommand.arguments)}"
-                    )
-                    testCommand.arguments
-                  }(ExecutionContext.parasitic)
-                val innerDebuggee =
-                  if (launcher.supportsForkedTestDebug) {
-                    val testCommandWithPort =
-                      launcher.mbtTestDebugCommandWithPort(
-                        workspace,
-                        target,
-                        testSuites,
-                        sourceFiles,
-                        frameworkOf(target, testSuites),
-                      )
-                    new ForkedTestDebugAdapter(
-                      port => arguments(testCommandWithPort(port), " (forked)"),
-                      workspace,
-                      env = javaHomeEnv(target),
-                      patched,
-                      userJavaHome(),
-                    )
-                  } else {
-                    val debugAgentFlag = MbtDebugLauncher.DebugAgentFlag
-                    val commandFuture = arguments(
-                      launcher.mbtTestDebugCommand(
-                        workspace,
-                        target,
-                        testSuites,
-                        debugAgentFlag,
-                        sourceFiles,
-                        frameworkOf(target, testSuites),
-                      ),
-                      "",
-                    )
-                    new BuildToolDebugAdapter(
-                      commandFuture,
-                      workspace,
-                      env = javaHomeEnv(target),
-                      patched,
-                      userJavaHome(),
-                    )
-                  }
-                val debuggee =
-                  new MbtTestResultAdapter(
-                    innerDebuggee,
-                    testSuites,
-                    testProvider,
-                    target.id,
-                    consumeReport = () => reportReader.get()(),
-                  )
-                val handler = dap.DebugServer.run(
-                  debuggee,
-                  new MetalsDebugToolsResolver(),
-                  new DebugLogger(),
-                  gracePeriod =
-                    Duration(debuggeeGracePeriodSeconds, TimeUnit.SECONDS),
+    startAfterCompilation(target, workspace, cancel) {
+      if (cancel.isCompleted)
+        Future.failed(
+          new CancellationException("MBT debug session cancelled")
+        )
+      else
+        debugConfigCreator.create(
+          target.id,
+          cancel,
+          isTests = true,
+        ) match {
+          case Left(error) => Future.failed(new IllegalStateException(error))
+          case Right(projectFuture) =>
+            projectFuture.map { project =>
+              if (cancel.isCompleted)
+                throw new CancellationException("MBT debug session cancelled")
+              val patched =
+                patchProjectForRun(
+                  project,
+                  target,
+                  workspace,
+                  toolName,
+                  isTests = true,
                 )
-                handler.uri
-              }
-          }
+              val reportReader =
+                new AtomicReference[() => MbtTestReport](() =>
+                  MbtTestReport.empty
+                )
+              def arguments(
+                  command: Future[MbtTestCommand],
+                  suffix: String,
+              ): Future[List[String]] =
+                command.map { testCommand =>
+                  reportReader.set(testCommand.consumeReport)
+                  scribe.info(
+                    s"MBT test debug session via $toolName$suffix: ${redactedCommand(testCommand.arguments)}"
+                  )
+                  testCommand.arguments
+                }(ExecutionContext.parasitic)
+              val innerDebuggee =
+                if (launcher.supportsForkedTestDebug) {
+                  val testCommandWithPort =
+                    launcher.mbtTestDebugCommandWithPort(
+                      workspace,
+                      target,
+                      testSuites,
+                      sourceFiles,
+                      frameworkOf(target, testSuites),
+                    )
+                  new ForkedTestDebugAdapter(
+                    port => arguments(testCommandWithPort(port), " (forked)"),
+                    workspace,
+                    env = javaHomeEnv(target),
+                    patched,
+                    userJavaHome(),
+                  )
+                } else {
+                  val debugAgentFlag = MbtDebugLauncher.DebugAgentFlag
+                  val commandFuture = arguments(
+                    launcher.mbtTestDebugCommand(
+                      workspace,
+                      target,
+                      testSuites,
+                      debugAgentFlag,
+                      sourceFiles,
+                      frameworkOf(target, testSuites),
+                    ),
+                    "",
+                  )
+                  new BuildToolDebugAdapter(
+                    commandFuture,
+                    workspace,
+                    env = javaHomeEnv(target),
+                    patched,
+                    userJavaHome(),
+                  )
+                }
+              val debuggee =
+                new MbtTestResultAdapter(
+                  innerDebuggee,
+                  testSuites,
+                  testProvider,
+                  target.id,
+                  consumeReport = () => reportReader.get()(),
+                )
+              val handler = dap.DebugServer.run(
+                debuggee,
+                new MetalsDebugToolsResolver(),
+                new DebugLogger(),
+                gracePeriod =
+                  Duration(debuggeeGracePeriodSeconds, TimeUnit.SECONDS),
+              )
+              handler.uri
+            }
+        }
     }
   }
 
