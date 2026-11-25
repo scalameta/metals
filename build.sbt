@@ -82,20 +82,28 @@ inThisBuild(
 )
 
 Global / onLoad ~= { old =>
+  val script =
+    """|#!/bin/sh
+       |set -eux
+       |head=$(git rev-parse HEAD)
+       |if ! cut -d' ' -f2 | grep -qx "$head"; then
+       |  echo "pre-push: HEAD is not pushed, skipping scalafmt"
+       |  exit 0
+       |fi
+       |remote=$(git remote -v | awk '$3 == "(fetch)" &&
+       |  $2 ~ "github[.]com[:/]scalameta/metals([.]git)?$" {print $1; exit}')
+       |bin/scalafmt --diff --diff-branch "${remote:+$remote/}main-v2"
+       |git diff --exit-code
+       |""".stripMargin
   if (!scala.util.Properties.isWin) {
     import java.nio.file._
-    val prePush = Paths.get(".git", "hooks", "pre-push")
-    // Skip hook installation if .git/hooks doesn't exist (e.g., in worktrees)
-    if (Files.exists(prePush.getParent)) {
-      Files.createDirectories(prePush.getParent)
-      Files.write(
-        prePush,
-        """#!/bin/sh
-          |set -eux
-          |bin/scalafmt --diff --diff-branch main-v2
-          |git diff --exit-code
-          |""".stripMargin.getBytes(),
-      )
+    val gitDir = Paths.get(".git")
+    // a worktree has a .git file
+    if (Files.isDirectory(gitDir)) {
+      val hooksDir = gitDir.resolve("hooks")
+      Files.createDirectories(hooksDir)
+      val prePush = hooksDir.resolve("pre-push")
+      Files.write(prePush, script.getBytes())
       prePush.toFile.setExecutable(true)
     }
   }
