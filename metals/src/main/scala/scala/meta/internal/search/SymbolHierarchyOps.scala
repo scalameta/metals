@@ -42,12 +42,18 @@ class SymbolHierarchyOps(
     lazy val global =
       globalTable.globalSymbolTableFor(anyWorkspacePath)
     symbol => {
-      textDocument.symbols
-        .find(_.symbol == symbol)
-        .orElse(findSymbolInformation(symbol))
+      semanticdbSymbolSearch(textDocument, symbol)
         .orElse(global.flatMap(_.safeInfo(symbol)))
     }
   }
+
+  def semanticdbSymbolSearch(
+      textDocument: TextDocument,
+      symbol: String,
+  ): Option[SymbolInformation] =
+    textDocument.symbols
+      .find(_.symbol == symbol)
+      .orElse(findSymbolInformation(symbol))
 
   private def findSymbolInformation(
       symbol: String

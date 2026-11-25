@@ -2,9 +2,11 @@ package scala.meta.internal.implementation
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Success
 
 import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
 import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReportContext
@@ -12,18 +14,21 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.search.SymbolHierarchyOps
+import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
 class Supermethods(
     client: MetalsLanguageClient,
     definitionProvider: DefinitionProvider,
     symbolHierarchyOps: SymbolHierarchyOps,
+    compilers: Compilers,
 )(implicit
     ec: ExecutionContext,
     reports: ReportContext,
@@ -60,12 +65,14 @@ class Supermethods(
         )
     }
 
-    (for {
-      filePath <- commandParams.getTextDocument.getUri.toAbsolutePathSafe
-      methodsHierarchy <- getSuperMethodHierarchySymbols(commandParams)
-      if methodsHierarchy.nonEmpty
-    } yield execute(methodsHierarchy, filePath))
-      .getOrElse(Future.successful(()))
+    commandParams.getTextDocument.getUri.toAbsolutePathSafe match {
+      case Some(filePath) =>
+        getSuperMethodHierarchySymbols(commandParams).flatMap {
+          case Nil => Future.unit
+          case methodsHierarchy => execute(methodsHierarchy, filePath)
+        }
+      case _ => Future.unit
+    }
   }
 
   def getGoToSuperMethodLocation(
@@ -116,7 +123,7 @@ class Supermethods(
 
   def getSuperMethodHierarchySymbols(
       params: TextDocumentPositionParams
-  ): Option[List[String]] =
+  ): Future[List[String]] =
     getSuperMethodHierarchySymbols(
       params.getTextDocument.getUri,
       params.getPosition,
@@ -125,21 +132,32 @@ class Supermethods(
   def getSuperMethodHierarchySymbols(
       path: String,
       position: Position,
-  ): Option[List[String]] = {
-    for {
+  ): Future[List[String]] = {
+    val empty = List.empty[String]
+    (for {
       filePath <- path.toAbsolutePathSafe
-      (symbolOcc, textDocument) <- definitionProvider.symbolOccurrence(
-        filePath,
-        position,
-      )
-      findSymbol = symbolHierarchyOps.defaultSymbolSearch(
-        filePath,
-        textDocument,
-      )
-      symbolInformation <- findSymbol(symbolOcc.symbol)
-    } yield SuperMethodProvider.getSuperMethodHierarchy(
-      symbolInformation
-    )
+      case (symbolOcc, textDocument) <-
+        definitionProvider.symbolOccurrence(filePath, position)
+      symbol = symbolOcc.symbol
+      // the global symbol table records no overridden symbols
+      symbolInformation =
+        symbolHierarchyOps.semanticdbSymbolSearch(textDocument, symbol)
+    } yield symbolInformation match {
+      case Some(info) =>
+        Future.successful(
+          SuperMethodProvider.getSuperMethodHierarchy(info.overriddenSymbols)
+        )
+      case _ if !symbol.isLocal =>
+        val doc = new TextDocumentIdentifier(path)
+        compilers
+          .referencedInfo(new TextDocumentPositionParams(doc, position), symbol)
+          .transform(
+            _.map(_.fold(empty)(_.overriddenSymbols))
+              .map(SuperMethodProvider.getSuperMethodHierarchy)
+              .orElse(Success(empty))
+          )
+      case _ => Future.successful(empty)
+    }).getOrElse(Future.successful(empty))
   }
 
   private def findSuperMethodSymbol(

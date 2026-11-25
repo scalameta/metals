@@ -542,6 +542,7 @@ abstract class MetalsLspService(
     languageClient,
     definitionProvider,
     symbolHierarchyOps,
+    compilers,
   )
 
   protected val scalafixProvider: ScalafixProvider = ScalafixProvider(
