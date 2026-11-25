@@ -215,6 +215,7 @@ commands ++= Seq(
       s"++${V.scala213} metals/publishLocal" ::
       "mtags-java/publishLocal" ::
       "mtags-protobuf/publishLocal" ::
+      "mtags-kotlin/publishLocal" ::
       publishMtags
   },
   Command.single("test-mtags-dyn") { (s, scalaV) =>
@@ -1087,8 +1088,7 @@ lazy val kotlinpc = project
     scalaVersion := V.scala213,
     crossScalaVersions := Seq(V.scala213),
   )
-  // `mtags` is for KotlinMtagsLibrarySuite.
-  .dependsOn(mtest, `mtags-kotlin`, mtags % Test)
+  .dependsOn(mtest, `mtags-kotlin`)
 
 lazy val protopc = project
   .in(file("tests/protopc"))
