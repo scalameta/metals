@@ -94,7 +94,7 @@ class StandaloneMcpService(
     new ModuleStatus(
       mcpClient,
       () => None,
-      (path) => projectMetalsLspService,
+      _ => projectMetalsLspService,
       clientConfig.icons(),
     )
 

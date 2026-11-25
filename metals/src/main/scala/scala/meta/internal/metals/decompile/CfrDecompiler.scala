@@ -47,7 +47,7 @@ class CfrDecompiler extends DecompileBytecode {
           }
           sink.asInstanceOf[Sink[T]]
 
-        case _ => ignored => ()
+        case _ => _ => ()
       }
 
     def decompiledOutput: String = stringWriter.toString

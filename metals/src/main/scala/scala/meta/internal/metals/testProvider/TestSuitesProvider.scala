@@ -270,7 +270,7 @@ final class TestSuitesProvider(
   def discoverAllTestSuites(): Future[List[BuildTargetUpdate]] =
     workDoneProgress.trackProgressFuture(
       "Discovering test suites",
-      { progress =>
+      { _ =>
         val targetIds = buildTargets.allBuildTargetIds.toList
           .filter { id =>
             buildTargets

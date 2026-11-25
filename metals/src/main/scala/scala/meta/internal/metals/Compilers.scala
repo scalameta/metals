@@ -9,6 +9,7 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 import scala.annotation.nowarn
+import scala.annotation.unused
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -229,7 +230,7 @@ class Compilers(
     }
   }
 
-  @nowarn("cat=unused")
+  @unused
   private val idleCompilerEvictionTask: ScheduledFuture[?] =
     sh.scheduleAtFixedRate(
       (() => evictIdleCompilers()): Runnable,

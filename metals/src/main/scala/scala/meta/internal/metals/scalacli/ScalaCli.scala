@@ -193,7 +193,8 @@ class ScalaCli(
         workDoneProgress = workDoneProgress,
         command,
       ) {
-        override protected def userConfiguration() = userConfig()
+        override protected def userConfiguration(): UserConfiguration =
+          userConfig()
       }
 
       val f = connectionFactory.fromSockets().flatMap { conn =>

@@ -187,7 +187,7 @@ object SystemProcess {
         }
       override def outputStream: OutputStream =
         new OutputStream {
-          override def write(value: Int) = {}
+          override def write(value: Int): Unit = {}
           override def write(b: Array[Byte], off: Int, len: Int): Unit = {}
         }
       override def cancel: Unit = ()

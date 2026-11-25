@@ -4,6 +4,7 @@ import java.io.File
 import java.nio.file.Path
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.ManifestJar
@@ -75,7 +76,7 @@ object Run {
       }
 
     new CancelableFuture[Unit] {
-      def future = process.complete.map { code =>
+      def future: Future[Unit] = process.complete.map { code =>
         if (code != 0)
           throw new Exception(s"debuggee failed with error code $code")
       }

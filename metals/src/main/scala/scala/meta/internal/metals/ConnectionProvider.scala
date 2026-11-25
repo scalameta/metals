@@ -552,7 +552,8 @@ class ConnectionProvider(
       }
 
       for (request <- optRequest) {
-        implicit val cancelPromise = CancelSwitch(request.cancelPromise)
+        implicit val cancelPromise: CancelSwitch =
+          CancelSwitch(request.cancelPromise)
         val result =
           if (request.cancelPromise.isCompleted)
             Interruptable.successful(BuildChange.Cancelled)

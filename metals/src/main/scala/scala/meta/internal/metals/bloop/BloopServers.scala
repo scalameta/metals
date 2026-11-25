@@ -238,18 +238,18 @@ final class BloopServers(
             }
           }
         }
-        def write(b: Int) =
+        def write(b: Int): Unit =
           lock.synchronized {
             buf.write(b)
             if (b == '\n')
               check()
           }
-        override def write(b: Array[Byte]) =
+        override def write(b: Array[Byte]): Unit =
           lock.synchronized {
             buf.write(b)
             if (b.exists(_ == '\n')) check()
           }
-        override def write(b: Array[Byte], off: Int, len: Int) =
+        override def write(b: Array[Byte], off: Int, len: Int): Unit =
           lock.synchronized {
             buf.write(b, off, len)
             if (b.iterator.drop(off).take(len).exists(_ == '\n')) check()
