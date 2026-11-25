@@ -128,7 +128,8 @@ object SemanticdbDefinition {
           input,
           includeMembers = includeMembers,
           includeFuzzyReferences = collectIdentifiers,
-          includeJvmFacade = includeJvmFacade
+          includeJvmFacade = includeJvmFacade,
+          includeInnerClasses = true
         ) {
           override def visitFuzzyReferenceOccurrence(
               occ: SymbolOccurrence

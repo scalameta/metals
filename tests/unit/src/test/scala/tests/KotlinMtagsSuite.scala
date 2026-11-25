@@ -285,6 +285,24 @@ class KotlinMtagsSuite extends munit.FunSuite {
     )
   }
 
+  test("semanticdb-definition-nested-types") {
+    // Workspace symbol search in dependency sources asks without members.
+    val definitions = List.newBuilder[String]
+    SemanticdbDefinition.foreach(
+      Mtags.testingSingleton,
+      Input.VirtualFile(
+        "A.kt",
+        "package a\nclass Outer {\n  fun f() = 1\n  class Needle\n}\n",
+      ),
+      dialects.Scala213,
+      includeMembers = false,
+    )(definition => definitions += definition.info.symbol)(FailOnReport)
+    assertEquals(
+      definitions.result(),
+      List("a/", "a/Outer#", "a/Outer#Needle#"),
+    )
+  }
+
   test("all-toplevels") {
     // Definition fallback, the tree view and symbol hierarchy use this path.
     val doc = Mtags.testingSingleton.allToplevels(
