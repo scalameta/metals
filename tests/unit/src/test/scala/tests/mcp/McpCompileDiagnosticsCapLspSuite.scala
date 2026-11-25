@@ -37,11 +37,11 @@ class McpCompileDiagnosticsCapLspSuite
       _ = assertNoDiff(
         result,
         s"""|Found errors in ${workspace.resolve(path)}:
-            |L3:C19-L3:C26: [Error]
+            |L4:C20-L4:C27: [Error]
             |type mismatch;
             | found   : String("first")
             | required: Int
-            |L4:C20-L4:C28: [Error]
+            |L5:C21-L5:C29: [Error]
             |type mismatch;
             | found   : String("second")
             | required: Int
@@ -84,11 +84,11 @@ class McpCompileDiagnosticsCapLspSuite
       _ = assertNoDiff(
         result,
         s"""|Compilation failed with errors:
-            |$errorsPath L3:C19-L3:C26: [Error]
+            |$errorsPath L4:C20-L4:C27: [Error]
             |type mismatch;
             | found   : String("first")
             | required: Int
-            |${Paths.get(warningsPath)} L3:C34-L3:C37: [Warning]
+            |${Paths.get(warningsPath)} L4:C35-L4:C38: [Warning]
             |Unused import
             |
             |[Showing 2 of 4 errors and warnings. Fix these and compile again.]

@@ -149,7 +149,7 @@ class McpCompileToolsLspSuite
       _ = assertNoDiff(
         result1,
         s"""|Found warnings in ${workspace.resolve("a/src/main/scala/com/example/Hello.scala")}:
-            |L3:C34-L3:C37: [Warning]
+            |L4:C35-L4:C38: [Warning]
             |Unused import
             |""".stripMargin,
       )
@@ -185,7 +185,7 @@ class McpCompileToolsLspSuite
       _ = assertNoDiff(
         result1,
         s"""|Compilation successful with warnings:
-            |$path L3:C34-L3:C37: [Warning]
+            |$path L4:C35-L4:C38: [Warning]
             |Unused import
             |""".stripMargin,
       )

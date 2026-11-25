@@ -22,7 +22,7 @@ class McpPrinterSuite extends BaseSuite {
     test(s"$name-cap-still-shows-a-diagnostic") {
       assertNoDiff(
         diagnostics.show(limit),
-        """|L0:C0-L0:C0: [Error]
+        """|L1:C1-L1:C1: [Error]
            |First error
            |
            |[Showing 1 of 2 errors and warnings. Fix these and compile again.]
@@ -34,7 +34,7 @@ class McpPrinterSuite extends BaseSuite {
   test("zero-cap-does-not-truncate-a-single-diagnostic") {
     assertNoDiff(
       diagnostics.take(1).show(limit = 0),
-      """|L0:C0-L0:C0: [Error]
+      """|L1:C1-L1:C1: [Error]
          |First error
          |""".stripMargin,
     )
