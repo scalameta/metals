@@ -31,12 +31,15 @@ import scala.meta.pc.reports.ReportContext
  * `@file:JvmName`), the symbols that Java and Scala callers use.
  * Function bodies and initializers are skipped, but their identifiers still
  * become fuzzy references when `includeFuzzyReferences` is set.
+ * `includeInnerClasses` adds the classes, interfaces, objects and type
+ * aliases that are nested in a class, also without `includeMembers`.
  */
 class KotlinMtags(
     val input: Input.VirtualFile,
     includeMembers: Boolean,
     includeFuzzyReferences: Boolean = false,
-    includeJvmFacade: Boolean = true
+    includeJvmFacade: Boolean = true,
+    includeInnerClasses: Boolean = false
 )(implicit rc: ReportContext)
     extends MtagsIndexer {
   import KotlinMtags._
@@ -158,6 +161,10 @@ class KotlinMtags(
     val overloads = new OverloadDisambiguator(mutable.Map.empty)
     var hasSecondaryConstructor = false
   }
+
+  /** Functions and properties of a class are emitted only with `includeMembers`. */
+  private def emitsMembers(region: Region): Boolean =
+    region.isTopLevel || includeMembers
 
   private def emit[A](region: Region)(thunk: => A): A =
     withOwner(region.owner)(thunk)
@@ -307,8 +314,6 @@ class KotlinMtags(
         skipHeader()
         if (isSym(peek(), '{')) { next(); skipBlock() }
       case Some((typeName, namePos)) =>
-        // Members of a class are parsed only with `includeMembers`, so every
-        // declaration that reaches this method is emitted.
         val classSymbol = emit(region)(
           tpe(typeName, namePos, kind, classProperties(kind, modifiers))
         )
@@ -342,7 +347,8 @@ class KotlinMtags(
           val endedBody =
             modifiers("enum") && parseEnumEntries(body, includeMembers)
           if (!endedBody) {
-            if (includeMembers) parseMembers(body, untilRBrace = true)
+            if (includeMembers || includeInnerClasses)
+              parseMembers(body, untilRBrace = true)
             else skipBlock()
           }
         }
@@ -552,7 +558,7 @@ class KotlinMtags(
   private def parseFunction(region: Region): Unit = {
     if (isSym(peek(), '<')) { next(); skipBalanced('<', '>') }
     val name = readReceiverAndName()
-    name.foreach { id =>
+    name.filter(_ => emitsMembers(region)).foreach { id =>
       for (r <- withFacade(region, pos(id))) {
         val disambiguator = r.overloads.disambiguator(id.name)
         emit(r)(method(id.name, disambiguator, pos(id), staticIn(r)))
@@ -606,7 +612,7 @@ class KotlinMtags(
       isVar: Boolean
   ): Unit = {
     val props = if (isVar) Property.VAR.value else Property.VAL.value
-    for (r <- withFacade(region, at)) {
+    if (emitsMembers(region)) for (r <- withFacade(region, at)) {
       val static = staticIn(r)
       emit(r)(term(name, at, Kind.METHOD, props | static))
       // An annotation parameter is a JVM method with the parameter's name.

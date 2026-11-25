@@ -14,11 +14,13 @@ class KotlinMtagsSuite extends munit.FunSuite {
       includeMembers: Boolean = true,
       includeFuzzyReferences: Boolean = false,
       path: String = "A.kt",
+      includeInnerClasses: Boolean = false,
   ): KotlinMtags =
     new KotlinMtags(
       Input.VirtualFile(path, code),
       includeMembers,
       includeFuzzyReferences,
+      includeInnerClasses = includeInnerClasses,
     )(FailOnReport)
 
   /** Fails the test when the scanner reports an exception. */
@@ -546,6 +548,56 @@ class KotlinMtagsSuite extends munit.FunSuite {
       ),
       List("a/unfinished.", "a/getUnfinished().", "a/E#", "a/E#RED.",
         "a/E#`<init>`()."),
+    )
+  }
+
+  test("inner-classes-without-members") {
+    val doc = mtags(
+      """|package a
+         |class Outer(val x: Int) {
+         |  fun member() = 1
+         |  val prop = 2
+         |  class Builder {
+         |    fun build() = Outer(1)
+         |    interface Step
+         |  }
+         |  companion object {
+         |    fun create() = Outer(1)
+         |  }
+         |  enum class Mode { ON }
+         |}
+         |fun top() = 1
+         |""".stripMargin,
+      includeMembers = false,
+      includeInnerClasses = true,
+    ).index()
+    assertEquals(
+      symbols(doc, s.SymbolOccurrence.Role.DEFINITION)
+        .filterNot(_.endsWith("/")),
+      List("a/Outer#", "a/Outer#Builder#", "a/Outer#Builder#Step#",
+        "a/Outer#Companion#", "a/Outer#Mode#", "a/AKt#", "a/top().",
+        "a/AKt#top()."),
+    )
+  }
+
+  test("adjacent-template-identifiers") {
+    val all = symbols(
+      mtags(
+        "package a\nfun join(first: String, last: String) = \"$first$last$$\"\n",
+        includeFuzzyReferences = true,
+      ).index(),
+      s.SymbolOccurrence.Role.REFERENCE,
+    )
+    assertEquals(all.filter(_.contains("$")), Nil)
+    val references = all.filter(r =>
+      r.endsWith("().") && (r.startsWith("first") || r.startsWith("last"))
+    )
+    // The parameters, then the template references.
+    assertEquals(references, List("first().", "last().", "first().", "last()."))
+    // A string that ends with `$` at the end of the file.
+    assertEquals(
+      definitions("package a\nval s = \"abc$"),
+      List("a/s.", "a/getS()."),
     )
   }
 }

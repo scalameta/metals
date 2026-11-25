@@ -153,13 +153,12 @@ final class KotlinLexer(text: String, startOffset: Int = 0) {
           modes.push(new InTemplate(0))
           result = scanCode()
         } else if (
-          c == '$' && Character.isJavaIdentifierStart(ch(offset + 1))
+          c == '$' && ch(offset + 1) != '$' &&
+          Character.isJavaIdentifierStart(ch(offset + 1))
         ) {
           val start = offset + 1
           var i = start + 1
-          while (
-            i < text.length && Character.isJavaIdentifierPart(text.charAt(i))
-          )
+          while (i < text.length && isTemplateNamePart(text.charAt(i)))
             i += 1
           offset = i
           val name = text.substring(start, i)
@@ -173,6 +172,10 @@ final class KotlinLexer(text: String, startOffset: Int = 0) {
     }
     result
   }
+
+  // A `$name` template ends at the next `$`: `"$first$last"` has two names.
+  private def isTemplateNamePart(c: Char): Boolean =
+    c != '$' && Character.isJavaIdentifierPart(c)
 
   private def skipCharLiteral(): Unit = {
     offset += 1
