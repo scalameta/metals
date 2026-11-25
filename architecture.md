@@ -115,6 +115,7 @@ The endpoints is `scala.meta.internal.mtags.Mtags`, which dispatches to several 
   - The unit test (`ScalaToplevelSuite.scala`) is a good resource to see which symbols it extracts.
 - `JavaMtags` parses the given Java file using `qdox`.
 - `JavaToplevelMtags` tokenize and parses Java code in the same way as `ScalaToplevelMtags`. We use our own custom tokenizer and parser instead of `qdox` for fast indexing.
+- `KotlinMtags` indexes Kotlin files. See [Kotlin](#kotlin).
 
 ## Kotlin
 
