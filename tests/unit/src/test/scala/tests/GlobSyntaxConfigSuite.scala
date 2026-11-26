@@ -9,13 +9,15 @@ import scala.meta.io.AbsolutePath
 
 class GlobSyntaxConfigSuite extends munit.FunSuite {
   test("kotlin-files-are-watched") {
-    val workspace = AbsolutePath(Paths.get("/workspace"))
+    val workspace = AbsolutePath(Paths.get("workspace").toAbsolutePath)
+    // The part of each glob after the workspace, so that the test reads the
+    // same on Windows, where a path has backslashes.
     val globs = GlobSyntaxConfig.path
       .registrationOptions(workspace)
       .getWatchers
       .asScala
-      .map(_.getGlobPattern.getLeft)
-    val file = Paths.get("/workspace/a/src/main/kotlin/a/Account.kt")
+      .map(_.getGlobPattern.getLeft.stripPrefix(s"$workspace/"))
+    val file = Paths.get("a", "src", "main", "kotlin", "a", "Account.kt")
     assert(
       clue(globs).exists(glob =>
         FileSystems.getDefault.getPathMatcher(s"glob:$glob").matches(file)
