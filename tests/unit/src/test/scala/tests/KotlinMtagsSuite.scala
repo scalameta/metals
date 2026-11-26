@@ -199,11 +199,13 @@ class KotlinMtagsSuite extends munit.FunSuite {
   }
 
   test("unterminated-string-keeps-next-declaration") {
-    val doc = mtags("package a\nval s = \"abc\nclass After\n").index()
-    assert(
-      symbols(doc, s.SymbolOccurrence.Role.DEFINITION).contains("a/After#"),
-      clue(symbols(doc, s.SymbolOccurrence.Role.DEFINITION)),
-    )
+    for (string <- List("\"abc", "\"abc\\")) {
+      val doc = mtags(s"package a\nval s = $string\nclass After\n").index()
+      assert(
+        symbols(doc, s.SymbolOccurrence.Role.DEFINITION).contains("a/After#"),
+        clue(string -> symbols(doc, s.SymbolOccurrence.Role.DEFINITION)),
+      )
+    }
   }
 
   test("postfix-increment-ends-initializer") {

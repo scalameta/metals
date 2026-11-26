@@ -141,8 +141,11 @@ final class KotlinLexer(text: String, startOffset: Int = 0) {
         result = Token.EOF
       } else {
         val c = text.charAt(offset)
-        if (!mode.raw && c == '\\') { offset += 2; done = false }
-        else if (!mode.raw && (c == '"' || c == '\n')) {
+        if (!mode.raw && c == '\\') {
+          // An escape skips one character, but a line break ends the string.
+          offset += (if (ch(offset + 1) == '\n') 1 else 2)
+          done = false
+        } else if (!mode.raw && (c == '"' || c == '\n')) {
           // An unclosed string ends at the line break, and the next token
           // starts a line.
           if (c == '\n') newline = true
