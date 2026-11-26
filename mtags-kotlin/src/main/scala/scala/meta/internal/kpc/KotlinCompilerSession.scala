@@ -94,12 +94,17 @@ final class KotlinCompilerSession(
    * analyses a copy of the file. Other files see the edit after the next
    * rebuild: a request for another file, or an edit of a declaration.
    */
-  def withFile[T](path: Path, text: String)(
+  def withFile[T](
+      path: Path,
+      text: String,
+      isCanceled: () => Boolean = () => false
+  )(
       f: (KtFile, Snapshot) => T
   ): Option[T] = synchronized {
     val file = normalize(path)
     val open = buffers.asScala.toMap
-    if (isShutdown || !open.get(file).contains(text)) None
+    // A request cancelled while it waited for the lock skips a rebuild.
+    if (isShutdown || isCanceled() || !open.get(file).contains(text)) None
     else {
       val stamps = diskStamps(open.keySet)
       val current = snapshot.filter(s =>

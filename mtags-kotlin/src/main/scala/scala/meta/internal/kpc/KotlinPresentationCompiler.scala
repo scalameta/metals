@@ -142,7 +142,7 @@ case class KotlinPresentationCompiler(
     def isCanceled = params.token().isCanceled
     async(default) {
       session
-        .withFile(path, params.text()) { (file, snapshot) =>
+        .withFile(path, params.text(), () => isCanceled) { (file, snapshot) =>
           if (isCanceled) default else f(file, snapshot)
         }
         .getOrElse(default)
