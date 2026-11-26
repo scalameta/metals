@@ -1,6 +1,5 @@
 package tests.mbt
 
-import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags.Symbol
 
 import org.eclipse.lsp4j as l
