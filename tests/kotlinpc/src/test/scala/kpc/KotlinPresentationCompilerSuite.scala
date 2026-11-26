@@ -1,11 +1,13 @@
 package kpc
 
+import java.lang.reflect.Proxy
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util
+import java.util.concurrent.ConcurrentLinkedQueue
 
 import scala.jdk.CollectionConverters._
 
@@ -19,6 +21,7 @@ import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
 import org.eclipse.lsp4j.Location
+import org.slf4j.Logger
 
 class KotlinPresentationCompilerSuite extends munit.FunSuite {
 
@@ -60,13 +63,42 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
     Files.write(p, text.getBytes(StandardCharsets.UTF_8))
   }
 
-  private lazy val pc: PresentationCompiler =
-    KotlinPresentationCompiler().newInstance(
-      "demo",
-      List(stdlib).asJava,
-      Nil.asJava,
-      () => List(modelPath, mainPath).asJava,
+  // Errors that the compiler logs in place of a failed result.
+  private val failures = new ConcurrentLinkedQueue[String]()
+  private val logger = Proxy
+    .newProxyInstance(
+      getClass.getClassLoader,
+      Array(classOf[Logger]),
+      (_, method, args) => {
+        if (method.getName == "error")
+          failures.add(Option(args).toList.flatten.mkString(" "))
+        if (method.getReturnType == classOf[Boolean]) java.lang.Boolean.FALSE
+        else null
+      },
     )
+    .asInstanceOf[Logger]
+
+  private lazy val pc: PresentationCompiler =
+    KotlinPresentationCompiler()
+      .withLogger(logger)
+      .newInstance(
+        "demo",
+        List(stdlib).asJava,
+        Nil.asJava,
+        () => List(modelPath, mainPath).asJava,
+      )
+
+  override def afterEach(context: AfterEach): Unit = {
+    val logged = failures.asScala.toList
+    failures.clear()
+    assertEquals(logged, Nil, "the compiler logged a failure")
+  }
+
+  override def afterAll(): Unit = pc.shutdown()
+
+  /** Params of an edit, with diagnostics. */
+  private def changed(uri: URI, text: String) =
+    CompilerVirtualFileParams(uri, text, shouldReturnDiagnostics = true)
 
   /** Params for `text` with the caret at `@@`, which is removed. */
   private def at(path: Path, text: String) = {
@@ -294,7 +326,7 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
   }
 
   private def errors(path: Path, text: String): List[String] =
-    pc.didChange(CompilerVirtualFileParams(path.toUri, text))
+    pc.didChange(changed(path.toUri, text))
       .get()
       .asScala
       .map(d => s"${d.getCode.getLeft}: ${d.getMessage.getLeft}")
@@ -310,10 +342,27 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
     )
   }
 
+  test("did-change-without-diagnostics") {
+    val renamed = model.replace("fun greet(", "fun welcome(") +
+      "val bad: Int = \"oops\"\n"
+    val params = CompilerVirtualFileParams(modelPath.toUri, renamed)
+    try {
+      assertEquals(pc.didChange(params).get().asScala.toList, Nil)
+      // The edit is recorded: Main.kt sees the new name.
+      val text = main.replace("  val sb", "  welc@@\n  val sb")
+      assertEquals(completions(text), List("welcome"))
+    } finally syncSession()
+  }
+
+  test("completion-library-constant") {
+    val text = importing("kotlin.math.P@@")
+    assert(completions(text).contains("PI"), clue(completions(text)))
+  }
+
   test("buffer-edit-in-another-file") {
     // `greet` is renamed in the open Model.kt buffer; Main.kt must see it.
     pc.didChange(
-      CompilerVirtualFileParams(
+      changed(
         modelPath.toUri,
         model.replace("fun greet(", "fun welcome("),
       )
@@ -322,14 +371,14 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
       errors(mainPath, main),
       List("UNRESOLVED_REFERENCE: Unresolved reference 'greet'."),
     )
-    pc.didChange(CompilerVirtualFileParams(modelPath.toUri, model)).get()
+    pc.didChange(changed(modelPath.toUri, model)).get()
     assertEquals(errors(mainPath, main), Nil)
   }
 
   test("buffer-changes-apply-in-call-order") {
     // The second call must see the first one, without waiting for it.
     pc.didChange(
-      CompilerVirtualFileParams(
+      changed(
         modelPath.toUri,
         model.replace("fun greet(", "fun welcome("),
       )
@@ -338,12 +387,12 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
       errors(mainPath, main),
       List("UNRESOLVED_REFERENCE: Unresolved reference 'greet'."),
     )
-    pc.didChange(CompilerVirtualFileParams(modelPath.toUri, model)).get()
+    pc.didChange(changed(modelPath.toUri, model)).get()
   }
 
   test("close-drops-unsaved-edits") {
     pc.didChange(
-      CompilerVirtualFileParams(
+      changed(
         modelPath.toUri,
         model.replace("fun greet(", "fun welcome("),
       )
@@ -383,7 +432,7 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
       () => List(modelPath, mainPath).asJava,
     )
     def diskErrors() = other
-      .didChange(CompilerVirtualFileParams(mainPath.toUri, main))
+      .didChange(changed(mainPath.toUri, main))
       .get()
       .asScala
       .map(_.getCode.getLeft)
@@ -409,7 +458,7 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
     val List(location) = result.locations.asScala.toList
     assertEquals(location.getUri, modelPath.toUri.toString)
     assertEquals(location.getRange.getStart.getLine, 3)
-    pc.didChange(CompilerVirtualFileParams(modelPath.toUri, model)).get()
+    pc.didChange(changed(modelPath.toUri, model)).get()
   }
 
   test("deleted-declaration-in-same-file") {
@@ -422,7 +471,7 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
       errors(modelPath, edited),
       List("UNRESOLVED_REFERENCE: Unresolved reference 'greet'."),
     )
-    pc.didChange(CompilerVirtualFileParams(modelPath.toUri, model)).get()
+    pc.didChange(changed(modelPath.toUri, model)).get()
   }
 
   test("rename-with-spaces-in-same-file") {
@@ -438,14 +487,14 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
         List("UNRESOLVED_REFERENCE: Unresolved reference 'gr eet'."),
       )
     }
-    pc.didChange(CompilerVirtualFileParams(modelPath.toUri, model)).get()
+    pc.didChange(changed(modelPath.toUri, model)).get()
   }
 
   test("definition-through-another-file-after-body-edit") {
     val withMake = main + "fun make() = User(\"A\", 1)\n"
-    pc.didChange(CompilerVirtualFileParams(mainPath.toUri, withMake)).get()
+    pc.didChange(changed(mainPath.toUri, withMake)).get()
     val v1 = model.replace("  fun isAdult", "  init {\n  }\n  fun isAdult")
-    pc.didChange(CompilerVirtualFileParams(modelPath.toUri, v1)).get()
+    pc.didChange(changed(modelPath.toUri, v1)).get()
     // A body edit above `isAdult`, and a use of it through Main.kt's `make`.
     val v2 = v1
       .replace("  init {\n  }", "  init {\n\n\n\n  }")
@@ -453,7 +502,7 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
     val result = pc.definition(at(modelPath, caret(v2, "sAdult()}"))).get()
     val List(location) = result.locations.asScala.toList
     assertEquals(location.getRange.getStart.getLine, 9)
-    pc.didChange(CompilerVirtualFileParams(mainPath.toUri, main)).get()
+    pc.didChange(changed(mainPath.toUri, main)).get()
     syncSession()
   }
 
@@ -467,13 +516,13 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
       errors(modelPath, v2),
       List("UNRESOLVED_REFERENCE: Unresolved reference 'Gone'."),
     )
-    pc.didChange(CompilerVirtualFileParams(modelPath.toUri, model)).get()
+    pc.didChange(changed(modelPath.toUri, model)).get()
   }
 
   /** Sets Main.kt to `mainText` and Model.kt to `modelText` in one session. */
   private def syncWith(mainText: String, modelText: String): Unit = {
-    pc.didChange(CompilerVirtualFileParams(mainPath.toUri, mainText)).get()
-    pc.didChange(CompilerVirtualFileParams(modelPath.toUri, modelText)).get()
+    pc.didChange(changed(mainPath.toUri, mainText)).get()
+    pc.didChange(changed(modelPath.toUri, modelText)).get()
   }
 
   test("sealed-inheritor-in-another-file-after-edit") {
@@ -524,8 +573,10 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
       ) = EmptySymbolSearch.searchMethods(query, target, visitor)
     }
     val withSearch = pc.withSearch(search)
-    for (place <- List("case()", "Of(1, 2, 3)", "rintln("))
-      withSearch.definition(at(mainPath, caret(main, place))).get()
+    try
+      for (place <- List("case()", "Of(1, 2, 3)", "rintln("))
+        withSearch.definition(at(mainPath, caret(main, place))).get()
+    finally withSearch.shutdown()
     assertEquals(
       queried.result(),
       List(
@@ -546,5 +597,20 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
     val text = main.replace("  val sb", "  u.is@@\n  val sb")
     assertEquals(completions(text), List("isAdult"))
     syncWith(main, model)
+  }
+
+  test("completion-package-hides-private-declarations") {
+    val v1 = model + "private fun shoutSecret() = 1\nfun shoutAll() = 1\n" +
+      "internal fun shoutHere() = 1\nprivate class ShoutBox\nclass ShoutList\n" +
+      "internal class ShoutLocal\n"
+    syncWith(main, v1)
+    try {
+      val qualified = main.replace("  val sb", "  demo.Shou@@\n  val sb")
+      assertEquals(completions(qualified), List("ShoutList", "ShoutLocal"))
+      assertEquals(
+        completions(importing("demo.shou@@")),
+        List("shoutAll", "shoutHere"),
+      )
+    } finally syncWith(main, model)
   }
 }

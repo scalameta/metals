@@ -75,6 +75,8 @@ import org.jetbrains.kotlin.psi.KtPsiFactory
 import org.jetbrains.kotlin.psi.KtQualifiedExpression
 import org.jetbrains.kotlin.renderer.RenderingUtilsKt
 import org.jetbrains.kotlin.types.Variance
+import org.slf4j.Logger
+import org.slf4j.helpers.NOPLogger
 
 /**
  * Presentation compiler for Kotlin on the Kotlin Analysis API (K2) in
@@ -85,7 +87,9 @@ case class KotlinPresentationCompiler(
     classpath: Seq[Path] = Nil,
     sources: Supplier[util.List[Path]] = () => util.Collections.emptyList(),
     search: SymbolSearch = EmptySymbolSearch,
-    config: PresentationCompilerConfig = PresentationCompilerConfigImpl()
+    config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
+    executor: Option[ExecutorService] = None,
+    logger: Logger = NOPLogger.NOP_LOGGER
 ) extends PresentationCompiler {
 
   def this() = this(buildTargetId = "")
@@ -108,20 +112,41 @@ case class KotlinPresentationCompiler(
     Paths.get(System.getProperty("java.home"))
   )
 
-  private lazy val libraryNames = new LibraryNames(fullClasspath)
+  // A restart drops it: a compile can add classes to classpath directories.
+  @volatile private var libraryNames = new LibraryNames(fullClasspath)
 
-  private def async[T](default: T)(f: => T): CompletableFuture[T] =
-    CompletableFuture.supplyAsync { () =>
+  private def async[T](default: T)(f: => T): CompletableFuture[T] = {
+    val task: Supplier[T] = { () =>
       try f
-      catch { case NonFatal(_) => default }
+      catch {
+        case NonFatal(e) =>
+          logger.error("Kotlin presentation compiler request failed", e)
+          default
+      }
     }
+    executor match {
+      case Some(e) => CompletableFuture.supplyAsync(task, e)
+      case None => CompletableFuture.supplyAsync(task)
+    }
+  }
 
+  /**
+   * Runs `f` on the file of `params`. A request that is cancelled while it
+   * waits for an earlier request gets `default` without analysis.
+   */
   private def onFile[T](params: VirtualFileParams, default: T)(
       f: (KtFile, KotlinCompilerSession#Snapshot) => T
   ): CompletableFuture[T] = {
     val path = Paths.get(params.uri())
     session.update(path, params.text())
-    async(default)(session.withFile(path, params.text())(f).getOrElse(default))
+    def isCanceled = params.token().isCanceled
+    async(default) {
+      session
+        .withFile(path, params.text()) { (file, snapshot) =>
+          if (isCanceled) default else f(file, snapshot)
+        }
+        .getOrElse(default)
+    }
   }
 
   private def analyze[T](file: KtFile)(f: KaSession => T): T =
@@ -355,7 +380,7 @@ case class KotlinPresentationCompiler(
                     ref,
                     classOf[KtImportDirective]
                   ) != null
-                  packageMembers(s, pkg, matches, inImport)
+                  packageMembers(s, copy, ref, pkg, matches, inImport)
                 case None => members(s, copy, ref, receiver, matches)
               }
             case _ => scopeNames(s, copy, ref, matches)
@@ -416,22 +441,26 @@ case class KotlinPresentationCompiler(
   /** Classes, top-level callables and subpackages of `pkg`. */
   private def packageMembers(
       s: KaSession,
+      file: KtFile,
+      ref: KtNameReferenceExpression,
       pkg: KaPackageSymbol,
       matches: Name => Boolean,
       inImport: Boolean
   ): List[CompletionItem] = {
     val scope = s.getPackageScope(pkg)
+    val visible = s.createUseSiteVisibilityChecker(s.getSymbol(file), null, ref)
     val names = libraryNames(pkg.getFqName.asString).toList
       .map(Name.identifier)
       .filter(matches)
       .asJava
-    val classifiers = Kt.toList(scope.classifiers(Kt.predicate(matches))) ++
-      Kt.toList(scope.classifiers(names)).filter(isUsable)
+    val classifiers = (Kt.toList(scope.classifiers(Kt.predicate(matches))) ++
+      Kt.toList(scope.classifiers(names)).filter(isUsable))
+      .filter(visible.isVisible(_))
     // An import can name an extension; an expression can call it only on a
     // receiver.
     val callables = (Kt.toList(scope.callables(Kt.predicate(matches))) ++
       Kt.toList(scope.callables(names)).filter(isUsable))
-      .filter(inImport || !_.isExtension)
+      .filter(c => (inImport || !c.isExtension) && visible.isVisible(c))
     val packages = Kt
       .toList(scope.getPackageSymbols(Kt.predicate(matches)))
       .map(p =>
@@ -561,34 +590,38 @@ case class KotlinPresentationCompiler(
   override def didChange(
       params: VirtualFileParams
   ): CompletableFuture[util.List[Diagnostic]] =
-    onFile(params, util.Collections.emptyList[Diagnostic]()) {
-      (file, snapshot) =>
-        analyze(file) { s =>
-          s.collectDiagnostics(
-            file,
-            KaDiagnosticCheckerFilter.ONLY_COMMON_CHECKERS
-          ).asScala
-            .toList
-            // A copy of an edited file is in a module of its own.
-            .filterNot(d =>
-              d.getFactoryName == "SEALED_INHERITOR_IN_DIFFERENT_MODULE" &&
-                snapshot.isCopy(file)
-            )
-            .flatMap { d =>
-              d.getTextRanges.asScala.headOption.map { r =>
-                val diagnostic = new Diagnostic(
-                  range(file.getText, r),
-                  d.getDefaultMessage,
-                  severity(d.getSeverity),
-                  "kotlin"
-                )
-                diagnostic.setCode(d.getFactoryName)
-                diagnostic
+    if (!params.shouldReturnDiagnostics()) {
+      session.update(Paths.get(params.uri()), params.text())
+      CompletableFuture.completedFuture(util.Collections.emptyList())
+    } else
+      onFile(params, util.Collections.emptyList[Diagnostic]()) {
+        (file, snapshot) =>
+          analyze(file) { s =>
+            s.collectDiagnostics(
+              file,
+              KaDiagnosticCheckerFilter.ONLY_COMMON_CHECKERS
+            ).asScala
+              .toList
+              // A copy of an edited file is in a module of its own.
+              .filterNot(d =>
+                d.getFactoryName == "SEALED_INHERITOR_IN_DIFFERENT_MODULE" &&
+                  snapshot.isCopy(file)
+              )
+              .flatMap { d =>
+                d.getTextRanges.asScala.headOption.map { r =>
+                  val diagnostic = new Diagnostic(
+                    range(file.getText, r),
+                    d.getDefaultMessage,
+                    severity(d.getSeverity),
+                    "kotlin"
+                  )
+                  diagnostic.setCode(d.getFactoryName)
+                  diagnostic
+                }
               }
-            }
-            .asJava
-        }
-    }
+              .asJava
+          }
+      }
 
   private def severity(s: KaSeverity): DiagnosticSeverity = s match {
     case KaSeverity.ERROR => DiagnosticSeverity.Error
@@ -718,7 +751,10 @@ case class KotlinPresentationCompiler(
   // ---------------------------------------------------------------- lifecycle
 
   override def shutdown(): Unit = session.shutdown()
-  override def restart(): Unit = session.restart()
+  override def restart(): Unit = {
+    libraryNames = new LibraryNames(fullClasspath)
+    session.restart()
+  }
   override def diagnosticsForDebuggingPurposes(): util.List[String] =
     util.Collections.emptyList()
   override def isLoaded: Boolean = true
@@ -728,7 +764,9 @@ case class KotlinPresentationCompiler(
     copy(search = search)
   override def withExecutorService(
       executorService: ExecutorService
-  ): PresentationCompiler = this
+  ): PresentationCompiler = copy(executor = Some(executorService))
+  override def withLogger(logger: Logger): PresentationCompiler =
+    copy(logger = logger)
   override def withScheduledExecutorService(
       scheduledExecutorService: ScheduledExecutorService
   ): PresentationCompiler = this

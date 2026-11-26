@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
+import java.util.concurrent.ConcurrentHashMap
 
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
@@ -74,16 +75,17 @@ final class KotlinCompilerSession(
   }
 
   private var snapshot: Option[Snapshot] = None
-  private val buffers = mutable.Map.empty[Path, String]
-  private var isShutdown = false
+  // Outside the lock of the session, so that an edit is recorded while an
+  // earlier request is still analysed.
+  private val buffers = new ConcurrentHashMap[Path, String]()
+  @volatile private var isShutdown = false
 
   /**
    * Records `text` as the content of the file at `path`. Call it in the
    * order of the requests: requests run later, in any order.
    */
-  def update(path: Path, text: String): Unit = synchronized {
-    if (!isShutdown) buffers(normalize(path)) = text
-  }
+  def update(path: Path, text: String): Unit =
+    if (!isShutdown) buffers.put(normalize(path), text)
 
   /**
    * Runs `f` on the file at `path`, when `text` is still its latest content.
@@ -96,13 +98,13 @@ final class KotlinCompilerSession(
       f: (KtFile, Snapshot) => T
   ): Option[T] = synchronized {
     val file = normalize(path)
-    if (isShutdown || !buffers.get(file).contains(text)) None
+    val open = buffers.asScala.toMap
+    if (isShutdown || !open.get(file).contains(text)) None
     else {
-      val stamps = diskStamps(buffers.keySet.toSet)
+      val stamps = diskStamps(open.keySet)
       val current = snapshot.filter(s =>
-        stamps == s.diskStamps -- buffers.keys && buffers.forall {
-          case (p, t) =>
-            p == file || s.texts.get(p).contains(t)
+        stamps == s.diskStamps -- open.keys && open.forall { case (p, t) =>
+          p == file || s.texts.get(p).contains(t)
         }
       )
       current.flatMap(s => s.files.get(file).map(s -> _)) match {
@@ -116,15 +118,15 @@ final class KotlinCompilerSession(
           if (outline(copy) == outline(kt)) {
             s.copies(file) = copy
             Some(f(copy, s))
-          } else rebuild().files.get(file).map(f(_, snapshot.get))
-        case None => rebuild().files.get(file).map(f(_, snapshot.get))
+          } else rebuild(open).files.get(file).map(f(_, snapshot.get))
+        case None => rebuild(open).files.get(file).map(f(_, snapshot.get))
       }
     }
   }
 
-  private def rebuild(): Snapshot = {
+  private def rebuild(open: Map[Path, String]): Snapshot = {
     close()
-    val fresh = build()
+    val fresh = build(open)
     snapshot = Some(fresh)
     fresh
   }
@@ -219,10 +221,10 @@ final class KotlinCompilerSession(
       .map(p => p -> Try(Files.getLastModifiedTime(p)).toOption)
       .toMap
 
-  private def build(): Snapshot = {
-    val stamps = diskStamps(buffers.keySet.toSet)
+  private def build(open: Map[Path, String]): Snapshot = {
+    val stamps = diskStamps(open.keySet)
     val fromDisk = stamps.keys.toSeq.flatMap(p => read(p).map(p -> _))
-    val texts = fromDisk.toMap ++ buffers
+    val texts = fromDisk.toMap ++ open
     val virtualFiles = texts.map { case (path, text) =>
       val fileType =
         if (path.toString.endsWith(".java")) JavaFileType.INSTANCE
