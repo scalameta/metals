@@ -143,6 +143,9 @@ final class KotlinLexer(text: String, startOffset: Int = 0) {
         val c = text.charAt(offset)
         if (!mode.raw && c == '\\') { offset += 2; done = false }
         else if (!mode.raw && (c == '"' || c == '\n')) {
+          // An unclosed string ends at the line break, and the next token
+          // starts a line.
+          if (c == '\n') newline = true
           offset += 1
           modes.pop()
           fromTemplate = !modes.isEmpty

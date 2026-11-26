@@ -198,6 +198,14 @@ class KotlinMtagsSuite extends munit.FunSuite {
     )
   }
 
+  test("unterminated-string-keeps-next-declaration") {
+    val doc = mtags("package a\nval s = \"abc\nclass After\n").index()
+    assert(
+      symbols(doc, s.SymbolOccurrence.Role.DEFINITION).contains("a/After#"),
+      clue(symbols(doc, s.SymbolOccurrence.Role.DEFINITION)),
+    )
+  }
+
   test("long-string-of-templates") {
     val code = "val s = \"" + "${0}" * 100000 + "\"\nfun after() = 1\n"
     val doc = mtags(code).index()
