@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.fileClasses.JvmFileClassUtil
+import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi._
 
 /**
@@ -118,6 +119,7 @@ class KotlinMtagsLibrarySuite extends munit.FunSuite {
         name: String,
         isVar: Boolean,
         inAnnotation: Boolean,
+        hasGetter: Boolean = true,
     ): Unit = {
       emit(offset, owner + encode(name) + ".")
       // A property `isOn` has the getter `isOn()` and the setter `setOn()`.
@@ -127,7 +129,7 @@ class KotlinMtagsLibrarySuite extends munit.FunSuite {
         if (inAnnotation || isBoolean) name else "get" + name.capitalize
       val setter =
         if (isBoolean) "set" + name.substring(2) else "set" + name.capitalize
-      emit(offset, owner + encode(getter) + "().")
+      if (hasGetter) emit(offset, owner + encode(getter) + "().")
       if (isVar)
         emit(offset, owner + encode(setter) + "().")
     }
@@ -136,22 +138,24 @@ class KotlinMtagsLibrarySuite extends munit.FunSuite {
       if (pkg.isEmpty) "_empty_/"
       else pkg.map(n => encode(n.asString) + "/").mkString
     // A top-level function or property is also a member of the JVM facade
-    // class, which the first such declaration defines.
-    val facade = packageOwner + encode(
-      JvmFileClassUtil
-        .getFileClassInfoNoResolve(file)
-        .getFacadeClassFqName
-        .shortName
-        .asString
-    ) + "#"
+    // class, and in a multifile facade of the part class of the file. The
+    // first such declaration defines these classes.
+    val info = JvmFileClassUtil.getFileClassInfoNoResolve(file)
+    val facades = {
+      val classes =
+        if (info.getWithJvmMultifileClass)
+          List(info.getFacadeClassFqName, info.getFileClassFqName)
+        else List(info.getFacadeClassFqName)
+      classes.map(c => packageOwner + encode(c.shortName.asString) + "#")
+    }
     var facadeDefined = false
     def withFacade(owner: String, offset: Int): List[String] =
       if (owner == packageOwner) {
         if (!facadeDefined) {
-          emit(offset, facade)
+          facades.foreach(emit(offset, _))
           facadeDefined = true
         }
-        List(owner, facade)
+        owner :: facades
       } else List(owner)
     def walk(declarations: Seq[KtDeclaration], owner: String): Unit =
       declarations.foreach {
@@ -184,8 +188,16 @@ class KotlinMtagsLibrarySuite extends munit.FunSuite {
           for (o <- withFacade(owner, d.getTextOffset))
             emit(d.getTextOffset, o + encode(d.getName) + "().")
         case d: KtProperty if d.getName != null =>
+          // In a JVM facade class, a `const val` is a field only.
           for (o <- withFacade(owner, d.getTextOffset))
-            property(d.getTextOffset, o, d.getName, d.isVar, false)
+            property(
+              d.getTextOffset,
+              o,
+              d.getName,
+              d.isVar,
+              inAnnotation = false,
+              hasGetter = o == owner || !d.hasModifier(KtTokens.CONST_KEYWORD),
+            )
         case d: KtTypeAlias if d.getName != null =>
           emit(d.getTextOffset, owner + encode(d.getName) + "#")
         case _ =>
