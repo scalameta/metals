@@ -1,5 +1,6 @@
 package tests
 
+import scala.meta.internal.io.FileIO
 import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.mtags.KotlinMtags
@@ -32,6 +33,15 @@ class KotlinMtagsExpectSuite extends DirectoryExpectSuite("mtags-kotlin") {
         val mdoc = Semanticdb.TextDocument.parseFrom(sdoc.toByteArray)
         SemanticdbPrinter.printDocument(mdoc, includeInfo = true)
       },
+    )
+  }
+
+  // The expect tests above come from the inputs that the build finds. This
+  // test fails when the build finds fewer inputs than there are expect files.
+  test("every-expect-file-has-an-input") {
+    assertEquals(
+      testCases().map(_.input.expectPath("mtags-kotlin").toString).sorted,
+      FileIO.listAllFilesRecursively(expectRoot).toList.map(_.toString).sorted,
     )
   }
 }
