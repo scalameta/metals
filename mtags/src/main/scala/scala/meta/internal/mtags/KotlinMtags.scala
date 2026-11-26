@@ -928,6 +928,12 @@ class KotlinMtags(
 
   /** Tokens after which a line break does not end an expression. */
   private def continuesExpression(t: Token): Boolean = t match {
+    // The lexer reads `n++` as two `+`; a postfix `++` or `--` ends a line.
+    case sym @ Token.Sym(c @ ('+' | '-'), _) =>
+      beforePrevious match {
+        case before @ Token.Sym(`c`, _) => before.start + 1 != sym.start
+        case _ => true
+      }
     case Token.Sym(c, _) => ContinuationSymbols.contains(c)
     case Token.Keyword(k, _) =>
       k == "else" || k == "in" || k == "is" || k == "as"

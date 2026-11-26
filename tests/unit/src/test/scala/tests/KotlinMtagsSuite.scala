@@ -206,6 +206,23 @@ class KotlinMtagsSuite extends munit.FunSuite {
     )
   }
 
+  test("postfix-increment-ends-initializer") {
+    val doc = mtags(
+      """|package a
+         |class C {
+         |  var n = 0
+         |  val old = n++
+         |  fun after() = 1
+         |  val older = n--
+         |  fun last() = 1
+         |}
+         |""".stripMargin
+    ).index()
+    val defs = symbols(doc, s.SymbolOccurrence.Role.DEFINITION)
+    assert(defs.contains("a/C#after()."), clue(defs))
+    assert(defs.contains("a/C#last()."), clue(defs))
+  }
+
   test("long-string-of-templates") {
     val code = "val s = \"" + "${0}" * 100000 + "\"\nfun after() = 1\n"
     val doc = mtags(code).index()
