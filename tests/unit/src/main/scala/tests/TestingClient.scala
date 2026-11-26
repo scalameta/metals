@@ -526,6 +526,16 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
 
   override def metalsSyncModes(params: MetalsSyncModesParams): Unit = {}
 
+  /** Declare `workspace.configuration` support and answer it with `null`, like IntelliJ. */
+  var answerConfigurationWithNull = false
+
+  override def configuration(
+      params: l.ConfigurationParams
+  ): CompletableFuture[java.util.List[Object]] =
+    CompletableFuture.completedFuture(
+      params.getItems.asScala.map(_ => null: Object).asJava
+    )
+
   override def createProgress(
       params: WorkDoneProgressCreateParams
   ): CompletableFuture[Void] = {
