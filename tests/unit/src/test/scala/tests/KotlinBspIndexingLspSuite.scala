@@ -73,6 +73,12 @@ class KotlinBspIndexingLspSuite extends BaseLspSuite("kotlin-bsp-indexing") {
           .map(_.definitionSymbol.value),
         Some("a/AccountKt#openAccount()."),
       )
+      _ = assertEquals(
+        server.server.definitionIndex
+          .definition(Symbol("a/openAccount()."))
+          .map(d => d.definitionSymbol.value -> d.path.filename),
+        Some("a/openAccount()." -> "Account.kt"),
+      )
       _ = assertNoDiff(
         server
           .workspaceSymbol("Account")
