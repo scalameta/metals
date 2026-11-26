@@ -386,8 +386,28 @@ case class KotlinPresentationCompiler(
             case _ => scopeNames(s, copy, ref, matches)
           }
           // In `` `wh@@` `` the user already typed the backticks.
-          if (ref.getText.startsWith("`"))
+          val inBackticks = ref.getText.startsWith("`")
+          if (inBackticks)
             found.foreach(item => item.setInsertText(item.getLabel))
+          // The edit replaces the whole name, also the part after the caret.
+          if (name.contains(Dummy)) {
+            val quote = if (inBackticks) 1 else 0
+            val start = ref.getTextRange.getStartOffset + quote
+            val end = ref.getTextRange.getEndOffset - Dummy.length -
+              (if (ref.getText.endsWith("`")) 1 else 0)
+            val replaced = new lsp4j.Range(
+              position(text, start),
+              position(text, math.max(start, end))
+            )
+            found.foreach { item =>
+              val newText = Option(item.getInsertText).getOrElse(item.getLabel)
+              item.setTextEdit(
+                lsp4j.jsonrpc.messages.Either.forLeft(
+                  new TextEdit(replaced, newText)
+                )
+              )
+            }
+          }
           found
         }
       }

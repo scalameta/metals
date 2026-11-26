@@ -199,6 +199,32 @@ class KotlinPresentationCompilerSuite extends munit.FunSuite {
     assertEquals(completions(text), List("uppercase"))
   }
 
+  /** `text` after the edit of the completion item `label` at `@@`. */
+  private def applyCompletion(text: String, label: String): String = {
+    val params = at(mainPath, text)
+    val item =
+      pc.complete(params).get().getItems.asScala.find(_.getLabel == label)
+    val edit = item.flatMap(i => Option(i.getTextEdit)).map(_.getLeft)
+    val source = params.text
+    def offset(p: org.eclipse.lsp4j.Position) =
+      source.linesWithSeparators.take(p.getLine).map(_.length).sum +
+        p.getCharacter
+    edit.fold(s"no text edit for $label in ${clue(item)}") { e =>
+      source.substring(0, offset(e.getRange.getStart)) + e.getNewText +
+        source.substring(offset(e.getRange.getEnd))
+    }
+  }
+
+  test("completion-replaces-whole-name") {
+    val text = main.replace("msg.uppercase()", "msg.upper@@case()")
+    assert(
+      applyCompletion(text, "uppercase").contains("println(msg.uppercase())")
+    )
+    val escaped = main.replace("  val sb", "  `wh@@en`\n  val sb") +
+      "fun `when`() {}\n"
+    assert(applyCompletion(escaped, "when").contains("  `when`\n  val sb"))
+  }
+
   test("completion-implicit-receiver-extension") {
     val text = main.replace("  val sb", "  msg.run { substringB@@ }\n  val sb")
     assertEquals(
