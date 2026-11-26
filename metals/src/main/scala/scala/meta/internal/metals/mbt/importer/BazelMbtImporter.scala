@@ -1,7 +1,10 @@
 package scala.meta.internal.metals.mbt.importer
 
+import java.util.concurrent.CancellationException
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BazelDigest
@@ -76,8 +79,10 @@ abstract class BazelMbtImporter(
       filteredSrcs = srcs.map { case (t, labels) =>
         t -> labels.filterNot(genSrcLabels)
       }
-      scalacOptions = targetsXmlDump.getStrings("scalacopts")
-      javacOptions = targetsXmlDump.getStrings("javacopts")
+      (scalacOptions, javacOptions) <- queryCompilerOptions(
+        targets,
+        targetsXmlDump,
+      )
       runTargets = targets
         .filter(target =>
           targetsXmlDump.ruleClassesByTarget
@@ -510,6 +515,42 @@ abstract class BazelMbtImporter(
 
   private def queryOutputBase(): Future[Option[AbsolutePath]] = {
     queryBazelInfo("output_base")
+  }
+
+  private def queryCompilerOptions(
+      targets: List[String],
+      targetsXmlDump: BazelTargetsXmlDump,
+  ): Future[(Map[String, List[String]], Map[String, List[String]])] = {
+    val xmlScalac = targetsXmlDump.getStrings("scalacopts")
+    val xmlJavac = targetsXmlDump.getStrings("javacopts")
+    BazelQuery.unflattenedRuleAttrsQuery(
+      targets,
+      List("scalacopts", "javacopts"),
+    ) match {
+      case None =>
+        Future.successful((xmlScalac, xmlJavac))
+      case Some(query) =>
+        query
+          .run(queryEnv)
+          .map { jsonproto =>
+            val parsed = BazelQuery.parseUnflattenedStringLists(
+              jsonproto,
+              Set("scalacopts", "javacopts"),
+            )
+            (
+              xmlScalac ++ parsed.getOrElse("scalacopts", Map.empty),
+              xmlJavac ++ parsed.getOrElse("javacopts", Map.empty),
+            )
+          }
+          .recover {
+            case NonFatal(e) if !e.isInstanceOf[CancellationException] =>
+              scribe.warn(
+                "bazel-mbt: failed to query unflattened compiler options, falling back to XML",
+                e,
+              )
+              (xmlScalac, xmlJavac)
+          }
+    }
   }
 
   private def queryBazelBin(): Future[Option[AbsolutePath]] = {

@@ -4,9 +4,13 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util as ju
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ScheduledExecutorService
 import java.util.function.Supplier
+import javax.tools.OptionChecker
+import javax.tools.ToolProvider
 
+import scala.annotation.tailrec
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -692,13 +696,69 @@ object CompilerConfiguration {
   private val inlineJavaReleaseOption =
     "(--(?:source|target|release)=)(.*)".r
 
+  private val warnedUnsupportedJavaPcOptions: ju.Set[String] =
+    ConcurrentHashMap.newKeySet[String]()
+
+  private lazy val systemJavaOptionCheckers
+      : Option[(OptionChecker, OptionChecker)] =
+    Option(ToolProvider.getSystemJavaCompiler()).map { compiler =>
+      (compiler, compiler.getStandardFileManager(null, null, null))
+    }
+
   private[metals] def filterJavaPcOptions(options: List[String]): List[String] =
     clampJavaReleaseOptions(
-      options.filterNot(option =>
-        excludedJavaPcOptionPrefixes.exists(option.startsWith)
+      dropUnsupportedJavaOptions(
+        options.filterNot(option =>
+          excludedJavaPcOptionPrefixes.exists(option.startsWith)
+        )
       ),
       Runtime.version().feature(),
     )
+
+  private[metals] def dropUnsupportedJavaOptions(
+      options: List[String]
+  ): List[String] =
+    systemJavaOptionCheckers match {
+      case None => options
+      case Some((compiler, fileManager)) =>
+        @tailrec
+        def loop(remaining: List[String], acc: List[String]): List[String] =
+          remaining match {
+            case Nil => acc.reverse
+            case option :: rest =>
+              val compilerArgs = compiler.isSupportedOption(option)
+              val numArgs =
+                if (compilerArgs >= 0) compilerArgs
+                else fileManager.isSupportedOption(option)
+              val inlineArg = option.contains(':') || option.contains('=')
+              if (numArgs < 0) {
+                warnUnsupportedJavaPcOption(option)
+                loop(rest, acc)
+              } else if (numArgs == 0 || inlineArg) {
+                loop(rest, option :: acc)
+              } else if (rest.lengthCompare(numArgs) < 0) {
+                if (
+                  warnedUnsupportedJavaPcOptions.add(s"$option <missing-arg>")
+                ) {
+                  scribe.warn(
+                    s"Dropping javac option '$option' with missing argument for the Java presentation compiler"
+                  )
+                }
+                loop(Nil, acc)
+              } else {
+                val (args, tail) = rest.splitAt(numArgs)
+                loop(tail, args.reverse ::: (option :: acc))
+              }
+          }
+        loop(options, Nil)
+    }
+
+  private def warnUnsupportedJavaPcOption(option: String): Unit =
+    if (warnedUnsupportedJavaPcOptions.add(option)) {
+      scribe.warn(
+        s"Dropping unsupported javac option '$option' for the Java presentation compiler"
+      )
+    }
 
   private[metals] def clampJavaReleaseOptions(
       options: List[String],
