@@ -11,7 +11,6 @@
 //           ^^^^^^^ definition example/toplevel/VERSION. METHOD(val)
 //           ^^^^^^^ definition example/toplevel/getVERSION(). METHOD
 //           ^^^^^^^ definition example/toplevel/TopLevelUtils#VERSION. METHOD(val, static)
-//           ^^^^^^^ definition example/toplevel/TopLevelUtils#getVERSION(). METHOD(static)
 
    var counter = 0
 //     ^^^^^^^ definition example/toplevel/counter. METHOD(var)

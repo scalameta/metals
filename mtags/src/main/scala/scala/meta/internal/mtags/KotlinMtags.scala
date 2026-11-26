@@ -280,10 +280,10 @@ class KotlinMtags(
           } else parseFunction(region)
           modifiers.clear()
         case Token.Keyword("val", _) =>
-          parseProperty(region, isVar = false)
+          parseProperty(region, isVar = false, isConst = modifiers("const"))
           modifiers.clear()
         case Token.Keyword("var", _) =>
-          parseProperty(region, isVar = true)
+          parseProperty(region, isVar = true, isConst = false)
           modifiers.clear()
         case Token.Keyword("typealias", _) =>
           parseTypeAlias(region)
@@ -497,7 +497,7 @@ class KotlinMtags(
         isVar <- propertyKind
         id <- name
         if shouldEmit
-      } emitProperty(body, id.name, pos(id), isVar)
+      } emitProperty(body, id.name, pos(id), isVar, isConst = false)
       if (!done) {
         // Skip the type and the default value up to `,` or `)`.
         skipUntil(stopAtClosingParen = true) match {
@@ -602,7 +602,11 @@ class KotlinMtags(
       case _ =>
     }
 
-  private def parseProperty(region: Region, isVar: Boolean): Unit = {
+  private def parseProperty(
+      region: Region,
+      isVar: Boolean,
+      isConst: Boolean
+  ): Unit = {
     if (isSym(peek(), '<')) { next(); skipBalanced('<', '>') }
     if (isSym(peek(), '(')) {
       // Destructuring declaration, only valid as a local.
@@ -610,7 +614,7 @@ class KotlinMtags(
       skipBalanced('(', ')')
     } else {
       readReceiverAndName().foreach { id =>
-        emitProperty(region, id.name, pos(id), isVar)
+        emitProperty(region, id.name, pos(id), isVar, isConst)
       }
     }
     skipHeader()
@@ -625,12 +629,16 @@ class KotlinMtags(
     }
   }
 
-  /** A property defines `name.`, its getter and, for `var`, its setter. */
+  /**
+   * A property defines `name.`, its getter and, for `var`, its setter. In a
+   * JVM facade class, a `const val` is a field only.
+   */
   private def emitProperty(
       region: Region,
       name: String,
       at: Position,
-      isVar: Boolean
+      isVar: Boolean,
+      isConst: Boolean
   ): Unit = {
     val props = if (isVar) Property.VAR.value else Property.VAL.value
     if (emitsMembers(region)) for (r <- withFacade(region, at)) {
@@ -638,7 +646,8 @@ class KotlinMtags(
       emit(r)(term(name, at, Kind.METHOD, props | static))
       // An annotation parameter is a JVM method with the parameter's name.
       val getter = if (r.isAnnotation) name else getterName(name)
-      emit(r)(method(getter, r.overloads.disambiguator(getter), at, static))
+      if (!(isConst && static != 0))
+        emit(r)(method(getter, r.overloads.disambiguator(getter), at, static))
       if (isVar) {
         val setter = setterName(name)
         emit(r)(method(setter, r.overloads.disambiguator(setter), at, static))

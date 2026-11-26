@@ -190,6 +190,14 @@ class KotlinMtagsSuite extends munit.FunSuite {
     )
   }
 
+  test("facade-const-without-getter") {
+    // Java sees `getAnswer()` as the function, the constant is a field.
+    assertEquals(
+      facadeSymbols("package a\nconst val answer = 42\nfun getAnswer() = 1\n"),
+      List("a/AKt#", "a/AKt#answer.", "a/AKt#getAnswer()."),
+    )
+  }
+
   test("long-string-of-templates") {
     val code = "val s = \"" + "${0}" * 100000 + "\"\nfun after() = 1\n"
     val doc = mtags(code).index()
