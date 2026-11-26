@@ -102,11 +102,12 @@ abstract class BazelMbtImporter(
       reachableLabelsByTarget = targetsXmlDump.reachableLabels(targets)
       externalDeps =
         targetsXmlDump.externalDepsByTarget(reachableLabelsByTarget)
+      externalDepLabels = externalDeps.values.flatten.toSet
       // Materialize the external repositories before the Maven lock file is
       // matched against `external/`; on a cold output base the jars of a
       // pinned rules_jvm_external hub do not exist until Bazel fetches them.
       _ <- BazelFetch.externalDependencies(
-        externalDeps.values.flatten.toSet,
+        externalDepLabels,
         queryEnv,
       )
       mavenHubs = BazelMavenJsonImporter
@@ -118,6 +119,17 @@ abstract class BazelMbtImporter(
         )
       _ = scribe.info(
         s"bazel-mbt: found maven hubs: ${mavenHubs.map(_.name.value).mkString(", ")}"
+      )
+      // `bazel fetch @maven//:...` only materializes the hub package, not the
+      // underlying per-artifact http_file repos. Re-fetch any missing or
+      // GC-evicted (dangling symlink) per-artifact repos before resolving jars.
+      missingArtifactRepos = BazelMavenJsonImporter.missingArtifactRepos(
+        externalDepLabels,
+        mavenHubs,
+      )
+      _ <- BazelFetch.repositories(
+        missingArtifactRepos,
+        queryEnv,
       )
       mavenImportStart = System.nanoTime()
       dependencyModules = BazelMavenJsonImporter

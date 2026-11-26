@@ -39,6 +39,37 @@ class BazelQuerySuite extends FunSuite {
     assertEquals(batches.size, 5)
   }
 
+  test("fetch-repo-batches-distinct-sorted-repos-with-force") {
+    val repos = List(
+      "@@+maven_wrapper+io_grpc_grpc_okhttp_1_82_0",
+      "@@+maven_wrapper+io_grpc_grpc_core_1_82_0",
+      "@@+maven_wrapper+io_grpc_grpc_okhttp_1_82_0",
+    )
+    val batches = BazelFetch.repoBatches(repos)
+    assertEquals(
+      batches.map(BazelFetch.repoCommandArgs),
+      List(
+        List(
+          "bazel", "fetch", "--force", "--keep_going",
+          "--repo=@@+maven_wrapper+io_grpc_grpc_core_1_82_0",
+          "--repo=@@+maven_wrapper+io_grpc_grpc_okhttp_1_82_0",
+        )
+      ),
+    )
+
+    val manyRepos =
+      (1 to 5).map(i => s"@@+maven_wrapper+artifact_$i").toList
+    val singleArgLen = " --repo=@@+maven_wrapper+artifact_1".length
+    val limit =
+      "bazel fetch --force --keep_going".length + 2 * singleArgLen
+    val splitBatches = BazelFetch.repoBatches(manyRepos, limit)
+    assertEquals(splitBatches.flatten, manyRepos.sorted)
+    splitBatches.foreach { batch =>
+      assert(BazelFetch.repoCommandArgs(batch).mkString(" ").length <= limit)
+    }
+    assertEquals(splitBatches.size, 3)
+  }
+
   test("parse-special-characters-bazel-query") {
     val targets = List(
       "//core:example_lib",

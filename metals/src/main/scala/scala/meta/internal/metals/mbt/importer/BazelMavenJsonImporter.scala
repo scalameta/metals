@@ -28,7 +28,23 @@ object BazelMavenJsonImporter {
   case class ScannedExtDir(
       dir: AbsolutePath,
       entries: List[AbsolutePath],
-  )
+  ) {
+
+    /**
+     * Entries from Bzlmod module extensions (`<prefix>+<apparent>` or
+     * `<prefix>~<apparent>`), indexed by their trailing apparent repo name.
+     */
+    lazy val bzlmodEntriesBySuffix: Map[String, List[AbsolutePath]] =
+      entries
+        .flatMap { entry =>
+          val name = entry.filename
+          val sep = math.max(name.lastIndexOf('+'), name.lastIndexOf('~'))
+          if (sep >= 0 && sep + 1 < name.length)
+            Some(name.substring(sep + 1) -> entry)
+          else None
+        }
+        .groupMap(_._1)(_._2)
+  }
 
   /**
    * Resolve the project's Maven dependency modules from the materialized
@@ -59,17 +75,26 @@ object BazelMavenJsonImporter {
       )
       Seq.empty[MbtDependencyModule]
     } else {
+      // Pre-scan external directories once so per-artifact lookups avoid repeated Files.list() calls.
+      val scannedExtDirs: Seq[ScannedExtDir] =
+        externalDirs(projectDir, outputBase)
+          .flatMap(d => Try(ScannedExtDir(d, d.list.toList)).toOption)
+
       val allModules = lockFiles.flatMap { path =>
         scribe.info(s"bazel-mbt: processing maven lock file: $path")
+        val extensionPrefix =
+          if (hubs.exists(_.importedLock == path))
+            bzlmodExtensionPrefix(path.parent.filename)
+          else None
         Try {
           val content = path.readText
           val json = gson.fromJson(content, classOf[JsonObject])
           extractArtifacts(
             json,
-            outputBase,
-            projectDir,
+            scannedExtDirs,
             repositoryNames,
             path,
+            extensionPrefix,
           )
         }.fold(
           e => {
@@ -537,24 +562,270 @@ object BazelMavenJsonImporter {
   }
 
   /**
+   * Bzlmod canonical extension prefix of a repository directory name (including
+   * the trailing `+` or `~`), e.g.:
+   *   - `+maven_wrapper+maven` -> `Some("+maven_wrapper+")`
+   *   - `rules_jvm_external++maven+maven` -> `Some("rules_jvm_external++maven+")`
+   *   - `_main~maven_wrapper~maven` -> `Some("_main~maven_wrapper~")`
+   *   - `maven` (WORKSPACE mode) -> `None`
+   */
+  def bzlmodExtensionPrefix(repoDirName: String): Option[String] = {
+    val sep =
+      math.max(repoDirName.lastIndexOf('+'), repoDirName.lastIndexOf('~'))
+    if (sep >= 0) Some(repoDirName.substring(0, sep + 1)) else None
+  }
+
+  private val hubBuildFileRepoPattern = """@@?([A-Za-z0-9.+~_-]+)//file\b""".r
+
+  private case class LockedHubArtifact(
+      group: String,
+      artifact: String,
+      version: String,
+      hasSources: Boolean,
+      isLegacy: Boolean,
+  ) {
+    def sanitizedCoord: String = sanitizeCoordinate(group, artifact)
+    def bzlmodJarRepo: String =
+      MavenLockFileParser.toBzlmodArtifactDir(group, artifact, version)
+  }
+
+  /**
+   * Canonical Bzlmod per-artifact repository labels (`@@<extPrefix><repo>`)
+   * needed by `externalDepLabels` whose directory in `external/` is missing or
+   * a dangling symlink (e.g. after Bazel 8+ repo-contents-cache GC).
+   */
+  def missingArtifactRepos(
+      externalDepLabels: Set[String],
+      hubs: List[MavenHub],
+  ): Set[String] =
+    if (externalDepLabels.isEmpty || hubs.isEmpty) Set.empty
+    else {
+      val coordsByHub: Map[HubName, Set[String]] =
+        (for {
+          label <- externalDepLabels
+          hubName <- labelHubName(label)
+          coord <- labelCoordinate(label)
+        } yield hubName -> coord).groupMap(_._1)(_._2)
+
+      (for {
+        hub <- hubs
+        directCoords = coordsByHub.getOrElse(hub.name, Set.empty)
+        if directCoords.nonEmpty && hub.importedLock.exists
+        hubDir = hub.importedLock.parent
+        extPrefix <- bzlmodExtensionPrefix(hubDir.filename).toList
+        repo <- missingArtifactReposForHub(
+          hub,
+          hubDir,
+          extPrefix,
+          directCoords,
+        )
+      } yield repo).toSet
+    }
+
+  private def missingArtifactReposForHub(
+      hub: MavenHub,
+      hubDir: AbsolutePath,
+      extPrefix: String,
+      directCoords: Set[String],
+  ): Set[String] =
+    Try {
+      val extDir = hubDir.parent
+      val json = gson.fromJson(hub.importedLock.readText, classOf[JsonObject])
+      val (artifacts, depsByCoord) = lockedArtifactsAndDeps(json)
+      val artifactsByCoord = artifacts.groupBy(_.sanitizedCoord)
+      val coordByVersionedAlias =
+        artifacts.map(a => a.bzlmodJarRepo -> a.sanitizedCoord).toMap
+
+      val seedCoords =
+        directCoords.map(c => coordByVersionedAlias.getOrElse(c, c))
+
+      @scala.annotation.tailrec
+      def closeCoords(
+          frontier: Set[String],
+          visited: Set[String],
+      ): Set[String] =
+        if (frontier.isEmpty) visited
+        else {
+          val next =
+            frontier.flatMap(c => depsByCoord.getOrElse(c, Set.empty)) --
+              visited
+          closeCoords(next, visited ++ next)
+        }
+
+      val reachableCoords = closeCoords(seedCoords, seedCoords)
+      val definedReposOpt = definedArtifactReposInHubBuild(hubDir)
+
+      for {
+        coord <- reachableCoords
+        artifact <- artifactsByCoord.getOrElse(coord, Nil)
+        apparentRepo <- candidateArtifactRepos(artifact, definedReposOpt)
+        canonicalRepo = s"$extPrefix$apparentRepo"
+        if !extDir.resolve(canonicalRepo).exists
+      } yield s"@@$canonicalRepo"
+    }.getOrElse(Set.empty)
+
+  private def candidateArtifactRepos(
+      artifact: LockedHubArtifact,
+      definedReposOpt: Option[Set[String]],
+  ): Seq[String] = {
+    val jarRepo = artifact.bzlmodJarRepo
+    definedReposOpt match {
+      case Some(defined) =>
+        val srcCandidates = MavenLockFileParser.toBzlmodSourcesDirs(
+          artifact.group,
+          artifact.artifact,
+          artifact.version,
+        )
+        (jarRepo +: srcCandidates).filter(defined.contains)
+      case None =>
+        val srcCandidates =
+          if (!artifact.hasSources) Seq.empty
+          else if (artifact.isLegacy)
+            Seq(
+              MavenLockFileParser.toBzlmodJarSourcesDir(
+                artifact.group,
+                artifact.artifact,
+                artifact.version,
+              )
+            )
+          else
+            Seq(
+              MavenLockFileParser.toBzlmodSourcesDir(
+                artifact.group,
+                artifact.artifact,
+                artifact.version,
+              )
+            )
+        jarRepo +: srcCandidates
+    }
+  }
+
+  private def definedArtifactReposInHubBuild(
+      hubDir: AbsolutePath
+  ): Option[Set[String]] = {
+    val buildFileOpt =
+      Seq(hubDir.resolve("BUILD"), hubDir.resolve("BUILD.bazel")).find(_.exists)
+    for {
+      buildFile <- buildFileOpt
+      content <- Try(buildFile.readText).toOption
+      repos = (for {
+        m <- hubBuildFileRepoPattern.findAllMatchIn(content)
+      } yield apparentRepoName(m.group(1))).toSet
+      if repos.nonEmpty
+    } yield repos
+  }
+
+  private def lockedArtifactsAndDeps(
+      json: JsonObject
+  ): (List[LockedHubArtifact], Map[String, Set[String]]) =
+    MavenLockFormat.of(json) match {
+      case MavenLockFormat.NewFormat(artifactsObj) =>
+        val artifacts =
+          for {
+            entry <- artifactsObj.entrySet().asScala.toList
+            parts = entry.getKey.split(":") if parts.length == 2
+            if entry.getValue.isJsonObject
+            info = entry.getValue.getAsJsonObject
+            version <- Option(info.get("version"))
+              .filter(_.isJsonPrimitive)
+              .map(_.getAsString)
+            if !version.contains("SNAPSHOT")
+            hasSources = Option(info.getAsJsonObject("shasums"))
+              .exists(_.has("sources"))
+          } yield LockedHubArtifact(
+            parts(0),
+            parts(1),
+            version,
+            hasSources,
+            isLegacy = false,
+          )
+
+        val depsByCoord =
+          Option(json.getAsJsonObject("dependencies")) match {
+            case Some(depsObj) =>
+              (for {
+                entry <- depsObj.entrySet().asScala
+                parts = entry.getKey.split(":") if parts.length == 2
+                if entry.getValue.isJsonArray
+                depCoords = (for {
+                  depElem <- entry.getValue.getAsJsonArray.asScala
+                  if depElem.isJsonPrimitive
+                  depParts = depElem.getAsString.split(":")
+                  if depParts.length >= 2
+                } yield sanitizeCoordinate(depParts(0), depParts(1))).toSet
+              } yield sanitizeCoordinate(parts(0), parts(1)) -> depCoords).toMap
+            case None => Map.empty[String, Set[String]]
+          }
+
+        (artifacts, depsByCoord)
+
+      case MavenLockFormat.LegacyFormat(dependencies) =>
+        val elems = dependencies.asScala.toList.filter(_.isJsonObject)
+        val sourcesCoords = (for {
+          elem <- elems
+          coord <- Option(elem.getAsJsonObject.get("coord"))
+            .filter(_.isJsonPrimitive)
+            .map(_.getAsString)
+          if coord.contains(":jar:sources:")
+        } yield coord).toSet
+
+        val artifacts =
+          for {
+            elem <- elems
+            obj = elem.getAsJsonObject
+            coord <- Option(obj.get("coord"))
+              .filter(_.isJsonPrimitive)
+              .map(_.getAsString)
+            if !coord.contains(":jar:sources:") && !coord.contains("-sources.")
+            parts = coord.split(":") if parts.length >= 3
+            version = parts.last if !version.contains("SNAPSHOT")
+            hasSources = sourcesCoords.contains(
+              s"${parts(0)}:${parts(1)}:jar:sources:$version"
+            )
+          } yield LockedHubArtifact(
+            parts(0),
+            parts(1),
+            version,
+            hasSources,
+            isLegacy = true,
+          )
+
+        val depsByCoord = (for {
+          elem <- elems
+          obj = elem.getAsJsonObject
+          coord <- Option(obj.get("coord"))
+            .filter(_.isJsonPrimitive)
+            .map(_.getAsString)
+          if !coord.contains(":jar:sources:") && !coord.contains("-sources.")
+          parts = coord.split(":") if parts.length >= 3
+          depsArr <- Option(obj.getAsJsonArray("dependencies"))
+          depCoords = (for {
+            depElem <- depsArr.asScala if depElem.isJsonPrimitive
+            depParts = depElem.getAsString.split(":") if depParts.length >= 2
+          } yield sanitizeCoordinate(depParts(0), depParts(1))).toSet
+        } yield sanitizeCoordinate(parts(0), parts(1)) -> depCoords).toMap
+
+        (artifacts, depsByCoord)
+
+      case MavenLockFormat.Unknown =>
+        (Nil, Map.empty)
+    }
+
+  /**
    * Extract artifacts from maven_install.json.
    */
   private def extractArtifacts(
       json: JsonObject,
-      outputBase: Option[AbsolutePath],
-      projectDir: AbsolutePath,
+      extDirs: Seq[ScannedExtDir],
       repositoryNames: Seq[String],
       lockFile: AbsolutePath,
+      extensionPrefix: Option[String],
   ): Seq[MbtDependencyModule] = {
     scribe.debug(s"Using repository names: ${repositoryNames.mkString(", ")}")
 
-    // Pre-scan external directories once so per-artifact lookups avoid repeated Files.list() calls.
-    val extDirs: Seq[ScannedExtDir] =
-      externalDirs(projectDir, outputBase)
-        .flatMap(d => Try(ScannedExtDir(d, d.list.toList)).toOption)
-
     MavenLockFileParser.create(json) match {
-      case Some(parser) => parser.parse(repositoryNames, extDirs)
+      case Some(parser) =>
+        parser.parse(repositoryNames, extDirs, extensionPrefix)
       case None =>
         scribe.debug(
           s"No 'artifacts' or 'dependency_tree.dependencies' found in $lockFile"
