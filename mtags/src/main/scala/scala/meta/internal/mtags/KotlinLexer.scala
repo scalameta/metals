@@ -27,11 +27,18 @@ final class KotlinLexer(text: String, startOffset: Int = 0) {
    */
   def next(): Token = {
     var t = scanOne()
-    while (fromTemplate && t != Token.EOF && !t.isInstanceOf[Token.Ident])
-      t = scanOne()
+    while (
+      t == null ||
+      (fromTemplate && t != Token.EOF && !t.isInstanceOf[Token.Ident])
+    ) t = scanOne()
     t
   }
 
+  /**
+   * The next token, or null when the scanner only enters or leaves a string
+   * or a template. The loop in `next` reads a long string with many
+   * templates in constant stack space.
+   */
   private def scanOne(): Token =
     if (!modes.isEmpty && modes.peek().isInstanceOf[InString])
       scanString(modes.peek().asInstanceOf[InString])
@@ -82,7 +89,7 @@ final class KotlinLexer(text: String, startOffset: Int = 0) {
         offset += 1
         modes.push(new InString(raw = false))
       }
-      next()
+      null
     } else if (c == '\'') {
       val start = offset
       skipCharLiteral()
@@ -115,7 +122,7 @@ final class KotlinLexer(text: String, startOffset: Int = 0) {
         else if (c == '}') {
           if (template.depth == 0) {
             modes.pop() // back inside the string
-            return next()
+            return null
           }
           template.depth -= 1
         }
@@ -126,13 +133,15 @@ final class KotlinLexer(text: String, startOffset: Int = 0) {
 
   private def scanString(mode: InString): Token = {
     var result: Token = null
-    while (result == null) {
+    var done = false
+    while (!done) {
+      done = true
       if (offset >= text.length) {
         modes.clear()
         result = Token.EOF
       } else {
         val c = text.charAt(offset)
-        if (!mode.raw && c == '\\') offset += 2
+        if (!mode.raw && c == '\\') { offset += 2; done = false }
         else if (!mode.raw && (c == '"' || c == '\n')) {
           offset += 1
           modes.pop()
@@ -151,7 +160,6 @@ final class KotlinLexer(text: String, startOffset: Int = 0) {
         } else if (c == '$' && ch(offset + 1) == '{') {
           offset += 2
           modes.push(new InTemplate(0))
-          result = scanCode()
         } else if (
           c == '$' && ch(offset + 1) != '$' &&
           Character.isJavaIdentifierStart(ch(offset + 1))
@@ -167,7 +175,7 @@ final class KotlinLexer(text: String, startOffset: Int = 0) {
             if (HardKeywords.contains(name))
               Token.Keyword(name, false)(start, i)
             else Token.Ident(name, start, i)(false)
-        } else offset += 1
+        } else { offset += 1; done = false }
       }
     }
     result

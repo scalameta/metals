@@ -190,6 +190,16 @@ class KotlinMtagsSuite extends munit.FunSuite {
     )
   }
 
+  test("long-string-of-templates") {
+    val code = "val s = \"" + "${0}" * 100000 + "\"\nfun after() = 1\n"
+    val doc = mtags(code).index()
+    assert(
+      symbols(doc, s.SymbolOccurrence.Role.DEFINITION)
+        .contains("_empty_/after()."),
+      clue(symbols(doc, s.SymbolOccurrence.Role.DEFINITION)),
+    )
+  }
+
   test("facade-annotation-text-only") {
     assertEquals(
       facadeSymbols(
