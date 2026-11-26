@@ -28,7 +28,10 @@ import scala.meta.pc.reports.ReportContext
  * types (`Name#`), and a property also defines its JVM getter and setter.
  * With `includeJvmFacade`, top-level functions and properties are also
  * emitted as members of the JVM facade class (`pkg/FileKt#` or the
- * `@file:JvmName`), the symbols that Java and Scala callers use.
+ * `@file:JvmName`), the symbols that Java and Scala callers use. A file of a
+ * multifile facade also emits them as members of its part class
+ * (`pkg/Facade__FileKt#`), where Java sees the functions of kotlin-stdlib,
+ * whose facades inherit them from the part classes.
  * Function bodies and initializers are skipped, but their identifiers still
  * become fuzzy references when `includeFuzzyReferences` is set.
  * `includeInnerClasses` adds the classes, interfaces, objects and type
@@ -169,7 +172,7 @@ class KotlinMtags(
   private def emit[A](region: Region)(thunk: => A): A =
     withOwner(region.owner)(thunk)
 
-  private var facadeName: String = {
+  private val fileFacadeName: String = {
     val file = input.path.substring(
       math.max(input.path.lastIndexOf('/'), input.path.lastIndexOf('\\')) + 1
     )
@@ -181,21 +184,28 @@ class KotlinMtags(
       else "_" + name
     prefix + "Kt"
   }
-  private var facade: Region = null
+  private var facadeName: String = fileFacadeName
+  private var isMultifile = false
+  private var facades: List[Region] = Nil
 
-  /** The region itself and, for a top-level region, the JVM facade class. */
+  /** The region itself and, for a top-level region, the JVM facade classes. */
   private def withFacade(region: Region, at: Position): List[Region] =
     if (region.isTopLevel && includeJvmFacade) {
-      if (facade == null) {
+      if (facades.isEmpty) {
         val props = Property.FINAL.value | Property.STATIC.value
-        val cls = emit(region)(tpe(facadeName, at, Kind.CLASS, props))
-        facade = new Region(cls, isTopLevel = false)
+        val part = s"${facadeName}__$fileFacadeName"
+        val names =
+          if (isMultifile) List(facadeName, part) else List(facadeName)
+        facades = names.map { name =>
+          val cls = emit(region)(tpe(name, at, Kind.CLASS, props))
+          new Region(cls, isTopLevel = false)
+        }
       }
-      List(region, facade)
+      region :: facades
     } else List(region)
 
   private def staticIn(region: Region): Int =
-    if (region eq facade) Property.STATIC.value else 0
+    if (facades.exists(_ eq region)) Property.STATIC.value else 0
 
   // ---------------------------------------------------------------- parser
 
@@ -207,10 +217,14 @@ class KotlinMtags(
         case at @ Token.Sym('@', _) =>
           next()
           skipAnnotation()
-          val annotation = text.substring(at.start, startOf(peek()))
+          // Up to the last token of the annotation: a comment after it is out.
+          val annotation = text.substring(at.start, endOf(previous))
           FileJvmName.findFirstMatchIn(annotation).foreach { m =>
             facadeName = m.group(1)
           }
+          val withoutStrings = annotation.replaceAll(StringLiteral, "\"\"")
+          if (FileMultifile.findFirstIn(withoutStrings).isDefined)
+            isMultifile = true
           header()
         case Token.Keyword("package", _) =>
           next()
@@ -442,6 +456,13 @@ class KotlinMtags(
     case id: Token.Ident => id.start
     case k: Token.Keyword => k.start
     case sym: Token.Sym => sym.start
+    case _ => text.length
+  }
+
+  private def endOf(t: Token): Int = t match {
+    case id: Token.Ident => id.end
+    case k: Token.Keyword => k.start + k.name.length
+    case sym: Token.Sym => sym.start + 1
     case _ => text.length
   }
 
@@ -912,6 +933,8 @@ object KotlinMtags {
   // `@file:JvmName("X")`, also qualified, with `name =`, or in `@file:[...]`.
   private val FileJvmName =
     """^@\s*file\s*:[\s\S]*?\bJvmName\s*\(\s*(?:name\s*=\s*)?"([^"\\]+)"""".r
+  private val FileMultifile = """^@\s*file\s*:[\s\S]*?\bJvmMultifileClass\b""".r
+  private val StringLiteral = """"(?:[^"\\]|\\.)*""""
 
   // An identifier can be a term or a type, so it references all three forms.
   private val ReferenceSuffixes = Array("().", ".", "#")

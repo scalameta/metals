@@ -162,7 +162,7 @@ class KotlinMtagsSuite extends munit.FunSuite {
            |fun f() = 1
            |""".stripMargin
       ),
-      List("a/Utils#", "a/Utils#f()."),
+      List("a/Utils#", "a/Utils__AKt#", "a/Utils#f().", "a/Utils__AKt#f()."),
     )
   }
 
@@ -186,7 +186,19 @@ class KotlinMtagsSuite extends munit.FunSuite {
            |fun f() = 1
            |""".stripMargin
       ),
-      List("a/Utils#", "a/Utils#f()."),
+      List("a/Utils#", "a/Utils__AKt#", "a/Utils#f().", "a/Utils__AKt#f()."),
+    )
+  }
+
+  test("facade-annotation-text-only") {
+    assertEquals(
+      facadeSymbols(
+        """|@file:Suppress("JvmMultifileClass") // JvmName("Wrong")
+           |package a
+           |fun f() = 1
+           |""".stripMargin
+      ),
+      List("a/AKt#", "a/AKt#f()."),
     )
   }
 
