@@ -42,37 +42,45 @@ class JavaCompletionProvider(
 ) {
   private val includeDetailInLabel =
     compiler.metalsConfig.isDetailIncludedInLabel
-  var scanner: JavaTreeScanner = _
+  private lazy val nextIsWhitespace =
+    params.offset() < params.text().length() &&
+      params.text().charAt(params.offset()).isWhitespace
 
-  lazy val identifier = extractIdentifier.toLowerCase
-  def completions(): CompletionList = {
-    val nextIsWhitespace =
-      if (params.offset() < params.text().length())
-        params.text().charAt(params.offset()).isWhitespace
-      else false
+  private lazy val compile = {
     val textWithSemicolon =
       if (nextIsWhitespace)
         params.text().substring(0, params.offset()) +
           ";" +
           params.text().substring(params.offset())
       else params.text()
-    val compile =
-      compiler
-        .compilationTask(
-          CompilerVirtualFileParams(
-            params.uri(),
-            textWithSemicolon,
-            params.token()
-          )
+    compiler
+      .compilationTask(
+        CompilerVirtualFileParams(
+          params.uri(),
+          textWithSemicolon,
+          params.token()
         )
-        .withAnalyzePhase()
-    val task = compile.task
-    val cu = compile.cu
-    scanner = new JavaTreeScanner(compiler.logger, task, cu)
+      )
+      .withAnalyzePhase()
+  }
+
+  lazy val scanner: JavaTreeScanner =
+    new JavaTreeScanner(compiler.logger, compile.task, compile.cu)
+
+  private lazy val node: Option[TreePath] = {
     val position =
       CursorPosition(params.offset(), params.offset(), params.offset())
-    val node = compiler.compilerTreeNode(scanner, position)
+    compiler.compilerTreeNode(scanner, position)
+  }
 
+  // end offset of the identifier being completed, might be after the cursor
+  // if completion is triggered in the middle of an identifier
+  private lazy val identifierEnd: Int =
+    node.map(inferIdentEnd).getOrElse(params.offset())
+
+  lazy val identifier = extractIdentifier.toLowerCase
+  def completions(): CompletionList = {
+    val task = compile.task
     node match {
       case Some(n) =>
         val items = n.getLeaf.getKind match {
@@ -289,7 +297,7 @@ class JavaCompletionProvider(
             ),
             Positions.toLspPosition(
               scanner.root.getLineMap(),
-              params.offset(),
+              identifierEnd,
               params.text()
             )
           ),
@@ -337,7 +345,7 @@ class JavaCompletionProvider(
         ),
         Positions.toLspPosition(
           scanner.root.getLineMap(),
-          params.offset(),
+          identifierEnd,
           params.text()
         )
       ),
@@ -498,6 +506,31 @@ class JavaCompletionProvider(
     i + 1
   }
 
+  private def inferIdentEnd(path: TreePath): Int =
+    path.getLeaf.getKind match {
+      // if `;` was inserted at the cursor, the identifier can't extend past it
+      case MEMBER_SELECT | IDENTIFIER if !nextIsWhitespace =>
+        val end = Trees
+          .instance(compile.task)
+          .getSourcePositions()
+          .getEndPosition(compile.cu, path.getLeaf)
+        if (end > params.offset()) end.toInt else params.offset()
+      case _ => params.offset()
+    }
+
+  private lazy val hasArgumentListAfterCursor: Boolean = {
+    var i = identifierEnd
+    while (
+      i < params.text().length() && Character.isWhitespace(
+        params.text().charAt(i)
+      )
+    ) {
+      i += 1
+    }
+    i < params.text().length() &&
+    params.text().charAt(i) == '('
+  }
+
   private def completionItem(element: Element): CompletionItem = {
     val simpleName = element.getKind match {
       case ElementKind.CONSTRUCTOR =>
@@ -506,6 +539,8 @@ class JavaCompletionProvider(
     }
 
     val (label, insertText) = element match {
+      case e: ExecutableElement if hasArgumentListAfterCursor =>
+        (JavaLabels.executableLabel(e), simpleName)
       case e: ExecutableElement
           if isCompletionSnippetsEnabled && e.getParameters.size() > 0 =>
         (JavaLabels.executableLabel(e), s"$simpleName($$0)")
