@@ -886,6 +886,24 @@ class MetalsGlobal(
           ) && (isOutline || fullyCompiled(filename)) && !forceNew =>
         value
       case maybeOldUnit =>
+        if (maybeOldUnit.isEmpty) {
+          val previousRun = currentRun
+          // An evicted unit can still have source symbols in the current run.
+          val retainedSource = previousRun.symSource.collectFirst {
+            case (sym, file) if file == source.file && sym.pos.isDefined =>
+              sym.pos.source
+          }
+          if (
+            !retainedSource
+              .exists(s => util.Arrays.equals(s.content, source.content))
+          ) {
+            // A classfile signature can refer to a nested type being re-entered
+            // from source. Revalidate it before typing the new unit.
+            newTyperRun()
+            // Namer consults Run.compiles when completing lazy companions.
+            currentRun.symSource ++= previousRun.symSource
+          }
+        }
         unitOfFile(richUnit.source.file) = richUnit
 
         // A source-path unit can have symbols without an interactive unit.
