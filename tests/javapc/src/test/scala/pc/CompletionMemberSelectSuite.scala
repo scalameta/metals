@@ -321,4 +321,93 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
        |}
        |""".stripMargin,
   )
+
+  checkEdit(
+    "existing-parens-with-plus",
+    """|class Record {
+       |  public int plusDays(int days) { return days; }
+       |}
+       |class A {
+       |  void run(Record record) {
+       |    record.plusD@@ + (1);
+       |  }
+       |}
+       |""".stripMargin,
+    """|class Record {
+       |  public int plusDays(int days) { return days; }
+       |}
+       |class A {
+       |  void run(Record record) {
+       |    record.plusDays($0) + (1);
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "existing-parens-with-middle",
+    """|class Record {
+       |  public int plusDays(int days) { return days; }
+       |}
+       |class A {
+       |  void run(Record record) {
+       |    record.plusD@@ays(1);
+       |  }
+       |}
+       |""".stripMargin,
+    """|class Record {
+       |  public int plusDays(int days) { return days; }
+       |}
+       |class A {
+       |  void run(Record record) {
+       |    record.plusDays(1);
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "middle-no-parens",
+    """|class Record {
+       |  public int plusDays(int days) { return days; }
+       |}
+       |class A {
+       |  void run(Record record) {
+       |    record.plusD@@ays;
+       |  }
+       |}
+       |""".stripMargin,
+    """|class Record {
+       |  public int plusDays(int days) { return days; }
+       |}
+       |class A {
+       |  void run(Record record) {
+       |    record.plusDays($0);
+       |  }
+       |}
+       |""".stripMargin,
+  )
+  checkEdit(
+    "middle-no-parens",
+    """|class Record {
+       |  public int plusDays(int days) { return days; }
+       |}
+       |class A {
+       |  void run(Record record) {
+       |    record.plusD@@a
+       |     ();
+       |  }
+       |}
+       |""".stripMargin,
+    """|class Record {
+       |  public int plusDays(int days) { return days; }
+       |}
+       |class A {
+       |  void run(Record record) {
+       |    record.plusDays
+       |     ();
+       |  }
+       |}
+       |""".stripMargin,
+  )
 }
