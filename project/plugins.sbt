@@ -1,7 +1,7 @@
 addSbtPlugin("com.github.sbt" % "sbt-jmh" % "0.4.9")
 addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.14.10")
 addSbtPlugin("com.github.sbt" % "sbt-ci-release" % "1.12.1")
-addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.9.3")
+addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.10.0")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.14.0")
 addSbtPlugin("com.github.reibitto" % "sbt-welcome" % "0.6.0")
 
