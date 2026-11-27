@@ -115,3 +115,21 @@ The endpoints is `scala.meta.internal.mtags.Mtags`, which dispatches to several 
   - The unit test (`ScalaToplevelSuite.scala`) is a good resource to see which symbols it extracts.
 - `JavaMtags` parses the given Java file using `qdox`.
 - `JavaToplevelMtags` tokenize and parses Java code in the same way as `ScalaToplevelMtags`. We use our own custom tokenizer and parser instead of `qdox` for fast indexing.
+
+## Kotlin
+
+`KotlinMtags` reads the declarations of a `.kt` file with a hand-written lexer (`KotlinLexer`) and parser. It skips function bodies and initializers. With `includeFuzzyReferences`, the identifiers in them become fuzzy references.
+
+The symbols follow the format of the [`semanticdb-kotlinc`](https://github.com/sourcegraph/scip-kotlin) compiler plugin: `pkg/f().` is a top-level function, `pkg/f(+1).` a second method `f` of the same owner (generated accessors count too), `pkg/Obj#` an object, `pkg/p.` a property and `pkg/getP().` its getter. Some symbols use the JVM names that Java and Scala callers see:
+
+| Declaration | `KotlinMtags` | `semanticdb-kotlinc` |
+| --- | --- | --- |
+| `fun f()` at the top level of `Client.kt` | `pkg/f().`, `pkg/ClientKt#f().` | `pkg/f().` |
+| Getter of `val isEmpty: Boolean` | `isEmpty().` | `getIsEmpty().` |
+| Setter of `var isOn: Boolean` | `setOn().` | `setIsOn().` |
+| Parameter of `annotation class A(val value: String)` | `A#value.`, `A#value().` | `A#value.`, `A#getValue().` |
+| Enum entry `RED(1)` of `enum class Color(val rgb: Int)` | `Color#RED.` | `` `<anonymous object at N>`# `` |
+
+A top-level function or property is also a static member of its JVM facade class, `ClientKt#` or the class that `@file:JvmName` names. In a file with `@file:JvmMultifileClass`, it is also a member of the part class of the file, such as `CollectionsKt__CollectionsJVMKt#`: Java sees the functions of kotlin-stdlib there, because its facade classes inherit them from the part classes. A function or accessor that `@JvmName` renames keeps its Kotlin name in the facade. `includeJvmFacade` is true by default; set it to false to remove these symbols. An explicit getter or setter (`get() = ...`) is on the line of the property name, and `semanticdb-kotlinc` puts it on the line of `get()`. `semanticdb-kotlinc` also indexes the members that the compiler generates, such as `values()` and `entries` of an enum class. The index has classes, objects (a nameless companion is `Companion#`), JVM facade classes, functions, properties with their accessors, type aliases, constructors (also the default one) and enum entries. Members of classes and objects are in it only with `includeMembers`, and nested classes, interfaces, objects and type aliases also with `includeInnerClasses`. With `includeJvmFacade`, the members of a JVM facade class are in it also without `includeMembers`.
+
+`KotlinMtagsSuite.scala` and the expect files in `tests/unit/src/test/resources/mtags-kotlin` show which symbols `KotlinMtags` extracts. The symbol format was compared with `semanticdb-kotlinc` 0.6.0 on the Kotlin compiler 2.2.0.
