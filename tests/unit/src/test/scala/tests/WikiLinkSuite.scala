@@ -63,4 +63,12 @@ class WikiLinkSuite extends BaseSuite {
   checkOffset("offset-adjacent-first", "[[a.A]][[b.B]]", 2, Some("a.A"))
   checkOffset("offset-adjacent-second-open", "[[a.A]][[b.B]]", 7, Some("b.B"))
   checkOffset("offset-closing-bracket", "[[a.A]]", 6, Some("a.A"))
+
+  test("links-with-target-offsets") {
+    val text = "see [[a.A]] and [[[ b.B the b]]] or [[unclosed"
+    assertEquals(
+      WikiLink.links(text).map(link => (link.target, link.targetStart)),
+      List(("a.A", 6), ("b.B", 20)),
+    )
+  }
 }

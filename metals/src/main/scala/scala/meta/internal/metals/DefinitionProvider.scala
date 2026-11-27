@@ -93,6 +93,18 @@ final class DefinitionProvider(
   val scaladocDefinitionProvider =
     new ScaladocDefinitionProvider(buffers, trees, destinationProvider)
 
+  def scaladocDefinition(
+      path: AbsolutePath,
+      params: TextDocumentPositionParams,
+  ): Option[DefinitionResult] = {
+    val scalaVersion = scalaVersionSelector.scalaVersionForPath(path)
+    scaladocDefinitionProvider.definition(
+      path,
+      params,
+      ScalaVersions.isScala3Version(scalaVersion),
+    )
+  }
+
   def definition(
       path: AbsolutePath,
       params: TextDocumentPositionParams,
@@ -143,8 +155,7 @@ final class DefinitionProvider(
     }
 
     def fromScalaDoc() = Future.successful {
-      scaladocDefinitionProvider
-        .definition(path, params, isScala3)
+      scaladocDefinition(path, params)
         .map(reportBuilder.setFoundScaladocDef)
     }
 
