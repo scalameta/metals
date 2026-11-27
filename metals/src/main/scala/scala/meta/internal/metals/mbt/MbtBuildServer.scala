@@ -146,7 +146,9 @@ final class MbtBuildServer(
               attrs: BasicFileAttributes,
           ): FileVisitResult = {
             val file = AbsolutePath(path)
-            if (attrs.isRegularFile && file.isScalaOrJava) {
+            if (
+              attrs.isRegularFile && (file.isScalaOrJava || file.isKotlinFilename)
+            ) {
               val relativePath = workspace.toNIO.relativize(path)
               targetsWithGlobs.foreach { target =>
                 if (

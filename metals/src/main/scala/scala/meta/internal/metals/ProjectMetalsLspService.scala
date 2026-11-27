@@ -626,11 +626,11 @@ class ProjectMetalsLspService(
       event: FileWatcherEvent
   ): CompletableFuture[Unit] = {
     val path = AbsolutePath(event.path)
-    val isScalaOrJava = path.isScalaOrJava
-    if (isScalaOrJava && event.eventType == EventType.Delete) {
+    val isSource = path.isScalaOrJava || path.isKotlinFilename
+    if (isSource && event.eventType == EventType.Delete) {
       onDelete(path).asJava
     } else if (
-      isScalaOrJava &&
+      isSource &&
       !path.isDirectory &&
       !savedFiles.isRecentlyActive(path) &&
       !buffers.contains(path)

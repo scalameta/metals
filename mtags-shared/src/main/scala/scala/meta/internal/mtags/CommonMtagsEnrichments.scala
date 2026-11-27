@@ -277,10 +277,13 @@ trait CommonMtagsEnrichments {
       doc.endsWith(".java")
     def isProtoFilename: Boolean =
       doc.endsWith(".proto")
+    def isKotlinFilename: Boolean =
+      doc.endsWith(".kt")
     def toJLanguage: Semanticdb.Language =
       if (isScalaFilename) Semanticdb.Language.SCALA
       else if (isJavaFilename) Semanticdb.Language.JAVA
       else if (isProtoFilename) Semanticdb.Language.PROTOBUF
+      else if (isKotlinFilename) Semanticdb.Language.KOTLIN
       else Semanticdb.Language.UNKNOWN_LANGUAGE
     def isScalaCLIGeneratedFile: Boolean =
       doc.endsWith(".sc.scala")

@@ -82,7 +82,8 @@ object MbtWorkspaceSymbolProvider {
   def isRelevantPath(file: String): Boolean = {
     file.endsWith(".java") ||
     file.endsWith(".proto") ||
-    file.endsWith(".scala")
+    file.endsWith(".scala") ||
+    file.endsWith(".kt")
   }
 }
 

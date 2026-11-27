@@ -6,6 +6,7 @@ import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.mtags.KotlinMtags
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.MtagsIndexer
 import scala.meta.internal.mtags.ScalaToplevelMtags
@@ -63,7 +64,8 @@ object SemanticdbDefinition {
       input: Input.VirtualFile,
       dialect: Dialect,
       includeMembers: Boolean,
-      collectIdentifiers: Boolean
+      collectIdentifiers: Boolean,
+      includeJvmFacade: Boolean = false
   )(
       fn: SemanticdbDefinition => Unit
   )(implicit rc: ReportContext): Option[MtagsIndexer] = {
@@ -120,6 +122,27 @@ object SemanticdbDefinition {
           case NonFatal(_) =>
           case _: LinkageError =>
         }
+        Some(indexer)
+      case Semanticdb.Language.KOTLIN =>
+        val indexer = new KotlinMtags(
+          input,
+          includeMembers = includeMembers,
+          includeFuzzyReferences = collectIdentifiers,
+          includeJvmFacade = includeJvmFacade,
+          includeInnerClasses = true
+        ) {
+          override def visitFuzzyReferenceOccurrence(
+              occ: SymbolOccurrence
+          ): Unit =
+            fn(SemanticdbDefinition(SymbolInformation(), occ, owner))
+          override def visitOccurrence(
+              occ: SymbolOccurrence,
+              info: SymbolInformation,
+              owner: String
+          ): Unit =
+            fn(SemanticdbDefinition(info, occ, owner))
+        }
+        indexer.indexRoot() // reports its own failures
         Some(indexer)
       case _ => None
     }

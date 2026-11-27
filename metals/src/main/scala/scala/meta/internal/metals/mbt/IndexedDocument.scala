@@ -100,6 +100,7 @@ case class IndexedDocument(
     val bloomFilterVersion = language match {
       case Language.JAVA => Mbt.IndexedDocument.BloomFilterVersion.V11
       case Language.SCALA => Mbt.IndexedDocument.BloomFilterVersion.V11
+      case Language.KOTLIN => Mbt.IndexedDocument.BloomFilterVersion.V11
       case Language.PROTOBUF => Mbt.IndexedDocument.BloomFilterVersion.V10
       case _ => Mbt.IndexedDocument.BloomFilterVersion.V6
     }
@@ -291,6 +292,7 @@ object IndexedDocument {
       // V11: Includes parent names of each symbol for test discovery.
       case Language.JAVA => Mbt.IndexedDocument.BloomFilterVersion.V11
       case Language.SCALA => Mbt.IndexedDocument.BloomFilterVersion.V11
+      case Language.KOTLIN => Mbt.IndexedDocument.BloomFilterVersion.V11
       // V10: Includes V9 option-block scanner fixes and Java packages for Turbine.
       case Language.PROTOBUF => Mbt.IndexedDocument.BloomFilterVersion.V10
       case _ => Mbt.IndexedDocument.BloomFilterVersion.V1

@@ -1,9 +1,12 @@
 package tests
 
+import scala.meta.dialects
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Reporter
+import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.mtags.KotlinMtags
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 import scala.meta.internal.semanticdb as s
 
@@ -261,6 +264,54 @@ class KotlinMtagsSuite extends munit.FunSuite {
       symbols(doc, s.SymbolOccurrence.Role.DEFINITION),
       List("a/Before#", "a/Before#`<init>`().", "a/AKt#", "a/broken().",
         "a/AKt#broken()."),
+    )
+  }
+
+  test("semanticdb-definition") {
+    // The workspace symbol index and dependency sources go through this path.
+    val definitions = List.newBuilder[String]
+    SemanticdbDefinition.foreach(
+      Mtags.testingSingleton,
+      Input.VirtualFile(
+        "A.kt",
+        "package a\nclass C {\n  fun f() = 1\n}\nfun g() = 2\n",
+      ),
+      dialects.Scala213,
+      includeMembers = true,
+    )(definition => definitions += definition.info.symbol)(FailOnReport)
+    assertEquals(
+      definitions.result(),
+      List("a/", "a/C#", "a/C#f().", "a/C#`<init>`().", "a/g()."),
+    )
+  }
+
+  test("semanticdb-definition-nested-types") {
+    // Workspace symbol search in dependency sources asks without members.
+    val definitions = List.newBuilder[String]
+    SemanticdbDefinition.foreach(
+      Mtags.testingSingleton,
+      Input.VirtualFile(
+        "A.kt",
+        "package a\nclass Outer {\n  fun f() = 1\n  class Needle\n}\n",
+      ),
+      dialects.Scala213,
+      includeMembers = false,
+    )(definition => definitions += definition.info.symbol)(FailOnReport)
+    assertEquals(
+      definitions.result(),
+      List("a/", "a/Outer#", "a/Outer#Needle#"),
+    )
+  }
+
+  test("all-toplevels") {
+    // Definition fallback, the tree view and symbol hierarchy use this path.
+    val doc = Mtags.testingSingleton.allToplevels(
+      Input.VirtualFile("A.kt", "package a\nclass C {\n  fun f() = 1\n}\n"),
+      dialects.Scala213,
+    )(FailOnReport)
+    assertEquals(
+      symbols(doc, s.SymbolOccurrence.Role.DEFINITION),
+      List("a/C#", "a/C#f().", "a/C#`<init>`()."),
     )
   }
 

@@ -28,6 +28,7 @@ import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.mbt.OnDidChangeSymbolsParams
 import scala.meta.internal.mtags.DependencyModule
 import scala.meta.internal.mtags.IndexingResult
+import scala.meta.internal.mtags.KotlinMtags
 import scala.meta.internal.mtags.MavenCoordinates
 import scala.meta.internal.mtags.MtagsIndexer
 import scala.meta.internal.semanticdb.Scala.*
@@ -488,7 +489,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
       (sourceItem, targets) <- data.sourceItemsToBuildTarget
       if sourceItem.exists
       source <- sourceItem.listRecursiveOrJar
-      if source.isScalaOrJava
+      if isIndexedSource(source)
     } {
       targets.asScala.foreach { target =>
         data.linkSourceFile(target, source)
@@ -780,30 +781,35 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
               references += occ.symbol
               return
             }
-
-            allSymbols += WorkspaceSymbolInformation(
-              info.symbol,
-              info.kind,
-              occ.range.fold(
-                new l.Range(new l.Position(0, 0), new l.Position(0, 0))
-              )(_.toLsp),
-            )
-            if (info.isExtension) {
-              occ.range.foreach { range =>
-                methodSymbols += WorkspaceSymbolInformation(
-                  info.symbol,
-                  info.kind,
-                  range.toLsp,
-                )
-              }
-            } else {
-              if (info.kind.isRelevantKind) {
+            // A Kotlin JVM facade symbol is only for go to definition from
+            // Java and Scala: symbol search lists the package-owned symbol.
+            val isSearchable =
+              !(source.isKotlinFilename && KotlinMtags.isJvmFacade(info))
+            if (isSearchable) {
+              allSymbols += WorkspaceSymbolInformation(
+                info.symbol,
+                info.kind,
+                occ.range.fold(
+                  new l.Range(new l.Position(0, 0), new l.Position(0, 0))
+                )(_.toLsp),
+              )
+              if (info.isExtension) {
                 occ.range.foreach { range =>
-                  symbols += WorkspaceSymbolInformation(
+                  methodSymbols += WorkspaceSymbolInformation(
                     info.symbol,
                     info.kind,
                     range.toLsp,
                   )
+                }
+              } else {
+                if (info.kind.isRelevantKind) {
+                  occ.range.foreach { range =>
+                    symbols += WorkspaceSymbolInformation(
+                      info.symbol,
+                      info.kind,
+                      range.toLsp,
+                    )
+                  }
                 }
               }
             }
@@ -827,6 +833,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
             dialect,
             includeMembers = true,
             collectIdentifiers = true,
+            includeJvmFacade = true,
           )(onDefinition)
 
           optMtags
@@ -942,6 +949,10 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
     (toplevels, overrides, toplevelMembersMap)
   }
 
+  // The same files are indexed at startup and after a change.
+  private def isIndexedSource(path: AbsolutePath): Boolean =
+    path.isScalaOrJava || path.isKotlinFilename
+
   // NOTE: this is largely a blocking non-async method. It returns a
   // Future[Unit] to let tests await on the recompilation of the Turbine
   // classpath for Java source file changes. You can ignore the Future
@@ -952,7 +963,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
     val data = buildData().map(_.data)
     val futures = for {
       path <- paths.iterator
-      if path.isScalaOrJava
+      if isIndexedSource(path)
     } yield {
       indexSourceFile(
         path,
