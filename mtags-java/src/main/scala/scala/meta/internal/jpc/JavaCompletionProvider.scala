@@ -498,6 +498,18 @@ class JavaCompletionProvider(
     i + 1
   }
 
+  private lazy val hasArgumentListAfterCursor: Boolean = {
+    var i = params.offset()
+    while (
+      i < params.text().length() &&
+      !Character.isJavaIdentifierPart(params.text().charAt(i)) &&
+      params.text().charAt(i) != '(' && params.text().charAt(i) != '\n'
+    ) {
+      i += 1
+    }
+    i < params.text().length() &&
+    params.text().charAt(i) == '('
+  }
   private def completionItem(element: Element): CompletionItem = {
     val simpleName = element.getKind match {
       case ElementKind.CONSTRUCTOR =>
@@ -506,6 +518,8 @@ class JavaCompletionProvider(
     }
 
     val (label, insertText) = element match {
+      case e: ExecutableElement if hasArgumentListAfterCursor =>
+        (JavaLabels.executableLabel(e), simpleName)
       case e: ExecutableElement
           if isCompletionSnippetsEnabled && e.getParameters.size() > 0 =>
         (JavaLabels.executableLabel(e), s"$simpleName($$0)")

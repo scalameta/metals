@@ -275,4 +275,50 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
        |main(java.lang.String[] args)
        |""".stripMargin,
   )
+
+  checkEdit(
+    "existing-parens",
+    """|import java.time.LocalDate;
+       |class Record {
+       |  public LocalDate getLocalDate() { return null; }
+       |}
+       |class A {
+       |  void run(Record record) {
+       |    record.getLoc@@();
+       |  }
+       |}
+       |""".stripMargin,
+    """|import java.time.LocalDate;
+       |class Record {
+       |  public LocalDate getLocalDate() { return null; }
+       |}
+       |class A {
+       |  void run(Record record) {
+       |    record.getLocalDate();
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  checkEdit(
+    "existing-parens-with-args",
+    """|class Record {
+       |  public int plusDays(int days) { return days; }
+       |}
+       |class A {
+       |  void run(Record record) {
+       |    record.plusD@@ (1);
+       |  }
+       |}
+       |""".stripMargin,
+    """|class Record {
+       |  public int plusDays(int days) { return days; }
+       |}
+       |class A {
+       |  void run(Record record) {
+       |    record.plusDays (1);
+       |  }
+       |}
+       |""".stripMargin,
+  )
 }
