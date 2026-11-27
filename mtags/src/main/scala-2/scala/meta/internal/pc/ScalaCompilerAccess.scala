@@ -3,11 +3,13 @@ package scala.meta.internal.pc
 import java.util.concurrent.ScheduledExecutorService
 
 import scala.concurrent.ExecutionContextExecutor
+import scala.reflect.internal.FatalError
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.MetalsGlobalThreadNoBackgroundCompilation
 import scala.tools.nsc.interactive.ShutdownReq
 import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.VirtualFileParams
 
@@ -65,6 +67,56 @@ class ScalaCompilerAccess(
     ) {
 
   def newReporter = new MetalsReporter(new Settings())
+
+  override def withSharedCompiler[T](default: T)(
+      thunk: CompilerWrapper[MetalsReporter, MetalsGlobal] => T
+  )(implicit queryInfo: PcQueryContext): T =
+    super.withSharedCompiler(default) { wrapper =>
+      val global = wrapper.compiler()
+      def requireValidCoreTypes(): Unit = {
+        val any = global.definitions.AnyClass
+        val anyRef = global.definitions.AnyRefClass
+        val declarations = global.definitions.ScalaPackageClass.rawInfo.decls
+        def requirePermanentType(symbol: global.Symbol): Unit = {
+          val info = if (symbol.hasRawInfo) symbol.rawInfo else global.NoType
+          // These definitions are created with complete infos. A source completer
+          // is also invalid here; inspecting raw info must not force it.
+          val invalidInfo =
+            if (symbol eq anyRef) info match {
+              case global.TypeRef(_, target, Nil) =>
+                target ne global.definitions.ObjectClass
+              case _ => true
+            }
+            else
+              info match {
+                case global.ClassInfoType(parents, _, clazz) =>
+                  (clazz ne symbol) || ((symbol eq any) && parents.nonEmpty)
+                case _ => true
+              }
+          if (
+            invalidInfo || symbol.sourceFile != null ||
+            global.currentRun.symSource.contains(symbol) ||
+            (declarations.lookup(symbol.name) ne symbol)
+          )
+            throw new FatalError(
+              s"presentation compiler core type ${symbol.fullName} has invalid info"
+            )
+        }
+        // AnyVal and primitive classes have compilable sources and may be replaced.
+        requirePermanentType(any)
+        requirePermanentType(anyRef)
+        requirePermanentType(global.definitions.NothingClass)
+        requirePermanentType(global.definitions.NullClass)
+        requirePermanentType(global.definitions.SingletonClass)
+      }
+      // Source typing can damage a fundamental symbol without throwing. Use
+      // CompilerAccess's existing single clean retry, checking both an instance
+      // retained from an earlier request and the result of the current one.
+      requireValidCoreTypes()
+      val result = thunk(wrapper)
+      requireValidCoreTypes()
+      result
+    }
 
   protected def handleSharedCompilerException(
       t: Throwable

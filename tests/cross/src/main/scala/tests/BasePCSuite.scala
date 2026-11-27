@@ -4,6 +4,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
 import scala.meta.Dialect
 import scala.meta.dialects
@@ -19,12 +20,14 @@ import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.PresentationCompilerConfig.ScalaImportsPlacement
+import scala.meta.pc.VirtualFileParams
 
 import coursierapi.Dependency
 import coursierapi.Fetch
 import coursierapi.MavenRepository
 import coursierapi.Repository
 import munit.Tag
+import org.eclipse.lsp4j.Diagnostic
 import org.slf4j.LoggerFactory
 
 abstract class BasePCSuite extends BaseSuite with PCSuite {
@@ -91,6 +94,12 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
         () => sourceFiles.asJava
       )
   }
+
+  protected def diagnosticsFor(
+      params: VirtualFileParams,
+      compiler: PresentationCompiler = presentationCompiler
+  ): Seq[Diagnostic] =
+    compiler.didChange(params).get(30, TimeUnit.SECONDS).asScala.toSeq
 
   protected def sourceFiles: Seq[Path] = Nil
 
