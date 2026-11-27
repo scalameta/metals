@@ -36,6 +36,7 @@ class UserConfigurationSync(
           folder.setUserConfig(newConfig)
           Future.unit
         },
+      nullAsEmpty = true,
     ).getOrElse(Future.successful(()))
 
   def onDidChangeConfiguration(
@@ -45,6 +46,7 @@ class UserConfigurationSync(
     optSyncUserConfiguration(
       services,
       folder => newConfig => folder.onUserConfigUpdate(newConfig),
+      nullAsEmpty = false,
     )
       .orElse {
         val fullJson =
@@ -62,6 +64,7 @@ class UserConfigurationSync(
   private def optSyncUserConfiguration(
       services: List[MetalsLspService],
       consume: MetalsLspService => UserConfiguration => Future[Unit],
+      nullAsEmpty: Boolean,
   ): Option[Future[Unit]] =
     Option.when(supportsConfiguration) {
       val items = services.map { service =>
@@ -76,9 +79,16 @@ class UserConfigurationSync(
         res <- Future
           .sequence(
             items.asScala.toList.zip(services).map {
-              case (_: JsonNull, _) => Future.successful(())
+              case (null | _: JsonNull, _) if !nullAsEmpty =>
+                Future.successful(())
               case (item, folder) =>
-                val json = item.asInstanceOf[JsonElement].getAsJsonObject()
+                // IntelliJ answers `null` when it has no settings. On init we
+                // still need the defaults, or `userConfigPromise` never completes.
+                val json = item match {
+                  case null | _: JsonNull => new JsonObject()
+                  case other =>
+                    other.asInstanceOf[JsonElement].getAsJsonObject()
+                }
                 userConfigFrom(json)
                   .map(consume(folder))
                   .getOrElse(Future.successful(()))

@@ -644,6 +644,8 @@ final case class TestingServer(
     workspaceCapabilities.setInlayHint(
       new l.InlayHintWorkspaceCapabilities(true)
     )
+    if (client.answerConfigurationWithNull)
+      workspaceCapabilities.setConfiguration(true)
     val textDocumentCapabilities = new TextDocumentClientCapabilities
     val windowCapabilities = new l.WindowClientCapabilities()
     windowCapabilities.setWorkDoneProgress(true)
@@ -1593,6 +1595,14 @@ final case class TestingServer(
         )
         .mkString("\n"),
     )
+
+  def semanticTokensCount(filePath: String): Future[Int] = {
+    val uri = toPath(filePath).toTextDocumentIdentifier
+    val params = new org.eclipse.lsp4j.SemanticTokensParams(uri)
+    fullServer.semanticTokensFull(params).asScala.map { tokens =>
+      Option(tokens).fold(0)(_.getData().size() / 5)
+    }
+  }
 
   def assertSemanticHighlight(
       filePath: String,

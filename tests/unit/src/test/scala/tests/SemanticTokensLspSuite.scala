@@ -410,6 +410,23 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
     } yield ()
   }
 
+  test("null-workspace-configuration") {
+    // IntelliJ answers `workspace/configuration` with `null`
+    client.answerConfigurationWithNull = true
+    val filePath = "a/src/main/scala/a/Main.scala"
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{ "a": {} }
+            |/$filePath
+            |object Main { val x = 1 }
+            |""".stripMargin
+      )
+      _ <- server.didOpen(filePath)
+      count <- server.semanticTokensCount(filePath)
+    } yield assert(count > 0, s"expected semantic tokens, got $count")
+  }
+
   def check(
       name: TestOptions,
       expected: String,
