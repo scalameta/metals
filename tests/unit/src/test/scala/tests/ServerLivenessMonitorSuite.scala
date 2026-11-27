@@ -31,7 +31,7 @@ class ServerLivenessMonitorSuite extends BaseSuite {
       bspStatus,
       AbsolutePath(Paths.get(".")),
       Icons.default,
-      (state) => (),
+      _ => (),
     )(LoggerReportContext)
     val livenessMonitor = new ServerLivenessMonitor(
       server,

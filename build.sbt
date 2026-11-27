@@ -61,8 +61,8 @@ inThisBuild(
     ),
     // semver does not like "+" in version numbers, especially if there are more than one
     dynverSeparator := "-",
-    scalaVersion := V.scala213,
-    crossScalaVersions := List(V.scala213),
+    scalaVersion := V.scala3,
+    crossScalaVersions := List(V.scala3),
     organization := "org.scalameta",
     licenses := Seq(
       "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
@@ -120,9 +120,15 @@ addCommandAlias(
   "+publishLocal; metals/runMain scala.meta.metals.DownloadDependencies ",
 )
 
+// Modules that are built only with Scala 2.13.
+val onScala213 = Seq(
+  scalaVersion := V.scala213,
+  crossScalaVersions := List(V.scala213),
+)
+
 lazy val `maven-metals` = project
   .in(file("maven-metals"))
-  .settings(sharedSettings)
+  .settings(sharedSettings, onScala213)
   .settings(
     moduleName := "metals-maven-plugin",
     crossPaths := false,
@@ -212,7 +218,7 @@ commands ++= Seq(
       "gradle-extractor/publishLocal" ::
       "semanticdb-javac/publishLocal" ::
       "semanticdb-protoc/publishLocal" ::
-      s"++${V.scala213} metals/publishLocal" ::
+      "metals/publishLocal" ::
       "mtags-java/publishLocal" ::
       "mtags-protobuf/publishLocal" ::
       publishMtags
@@ -333,6 +339,7 @@ publish / skip := true
 lazy val interfaces = project
   .in(file("mtags-interfaces"))
   .settings(
+    onScala213,
     moduleName := "mtags-interfaces",
     autoScalaLibrary := false,
     mimaPreviousArtifacts := Set(
@@ -357,7 +364,7 @@ lazy val interfaces = project
 
 lazy val turbine = project
   .in(file("vendor/turbine"))
-  .settings(sharedSettings)
+  .settings(sharedSettings, onScala213)
   .settings(
     moduleName := "turbine",
     Compile / packageSrc / publishArtifact := true,
@@ -381,7 +388,7 @@ lazy val turbine = project
   )
 lazy val jsemanticdb = project
   .in(file("jsemanticdb"))
-  .settings(sharedSettings)
+  .settings(sharedSettings, onScala213)
   .settings(
     moduleName := "jsemanticdb",
     Compile / packageSrc / publishArtifact := true,
@@ -401,7 +408,7 @@ lazy val jsemanticdb = project
 
 lazy val mtagsShared = project
   .in(file("mtags-shared"))
-  .settings(sharedSettings)
+  .settings(sharedSettings, onScala213)
   .settings(
     moduleName := "mtags-shared",
     crossTarget := target.value / s"scala-${scalaVersion.value}",
@@ -542,6 +549,7 @@ val pprintDebuggingDependency: List[ModuleID] =
 lazy val mtags = project
   .settings(
     sharedSettings,
+    onScala213,
     mtagsSettings,
     moduleName := "mtags",
     projectDependencies := projectDependencies.value,
@@ -555,6 +563,7 @@ val toolchainJavaOptions = List(
 ) ++ sharedJavaOptions.filter(_.startsWith("--add-exports="))
 lazy val `java-header-compiler` = project
   .settings(
+    onScala213,
     moduleName := "java-header-compiler",
     autoScalaLibrary := false,
     crossPaths := false,
@@ -582,6 +591,7 @@ lazy val `java-header-compiler` = project
 
 lazy val `semanticdb-javac` = project
   .settings(
+    onScala213,
     moduleName := "semanticdb-javac",
     autoScalaLibrary := false,
     crossPaths := false,
@@ -614,10 +624,12 @@ lazy val `mtags-java` = project
     Compile / javacOptions ++= List("-Xlint:deprecation"),
   )
   .configure(JavaPcSettings.settings(sharedSettings))
+  .settings(onScala213)
   .dependsOn(interfaces, mtagsShared, `semanticdb-javac`, turbine)
 
 lazy val `semanticdb-protoc` = project
   .settings(
+    onScala213,
     moduleName := "semanticdb-protoc",
     autoScalaLibrary := false,
     crossPaths := false,
@@ -635,6 +647,7 @@ lazy val `semanticdb-protoc` = project
 lazy val `mtags-protobuf` = project
   .settings(
     sharedSettings,
+    onScala213,
     libraryDependencies ++= pprintDebuggingDependency,
     libraryDependencies +=
       "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
@@ -661,6 +674,59 @@ lazy val `gradle-extractor` = project
   )
   .settings(sharedScalacOptions)
   .dependsOn(interfaces)
+
+// TODO: remove together with the 2.13 pins below once mtags is migrated to Scala 3.
+// mtags contains the nsc-based presentation compiler, so it stays on 2.13.
+val mtagsFrom213 = Seq(
+  projectDependencies := {
+    val deps = projectDependencies.value
+    if (!isScala3(CrossVersion.partialVersion(scalaVersion.value))) deps
+    else
+      deps.map { m =>
+        if (m.name == "mtags")
+          m.withCrossVersion(CrossVersion.constant(V.scala213))
+        else if (m.name.startsWith("mtags"))
+          m.withCrossVersion(CrossVersion.for3Use2_13)
+        else m
+      }
+  }
+)
+
+val scala3With213Mtags = mtagsFrom213 ++ Seq(
+  libraryDependencies := {
+    val deps = libraryDependencies.value
+    if (!isScala3(CrossVersion.partialVersion(scalaVersion.value))) deps
+    else
+      deps.map { m =>
+        // scribe relies on `sourcecode` macros, which only expand in Scala 3 if the `_3` artifacts are used
+        if (
+          m.crossVersion == CrossVersion.binary && m.organization != "org.scala-lang" && m.organization != "com.outr" && m.name != "munit"
+        )
+          m.withCrossVersion(CrossVersion.for3Use2_13)
+        else m
+      } :+ ("com.lihaoyi" %% "fansi" % "0.5.1")
+  },
+  // avoid clashes with the `_3` artifacts pulled in by scribe
+  excludeDependencies ++= {
+    if (!isScala3(CrossVersion.partialVersion(scalaVersion.value))) Nil
+    else
+      // on CI pprint_3 is not on the classpath, so mdoc needs its own pprint_2.13
+      (if (isCI) Nil
+       else Seq(ExclusionRule("com.lihaoyi", "pprint_2.13"))) ++ Seq(
+        ExclusionRule("com.lihaoyi", "sourcecode_2.13"),
+        ExclusionRule("com.lihaoyi", "fansi_2.13"),
+        ExclusionRule("org.scala-lang.modules", "scala-collection-compat_2.13"),
+        ExclusionRule("com.outr", "scribe_2.13"),
+        ExclusionRule("com.outr", "scribe-slf4j2_2.13"),
+        ExclusionRule("com.outr", "moduload_2.13"),
+        ExclusionRule("com.outr", "perfolation_2.13"),
+        ExclusionRule("org.scalameta", "munit_2.13"),
+        ExclusionRule("org.scalameta", "munit-diff_2.13"),
+        ExclusionRule("io.github.cquiroz", "scala-java-time_2.13"),
+        ExclusionRule("io.github.cquiroz", "scala-java-time-tzdb_2.13"),
+      )
+  },
+)
 
 lazy val metals = project
   .settings(scala213OnlyScalafix)
@@ -738,7 +804,7 @@ lazy val metals = project
       "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
       ("org.scalameta" %% "semanticdb-metap" % V.semanticdb(
         scalaVersion.value
-      )).cross(CrossVersion.full),
+      )).cross(CrossVersion.constant(V.scala213)),
       "org.scalameta" %% "semanticdb-shared" % V.semanticdb(scalaVersion.value),
       "org.scala-lang.modules" %% "scala-xml" % "2.5.0",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
@@ -800,6 +866,7 @@ lazy val metals = project
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
   )
+  .settings(scala3With213Mtags)
   .dependsOn(mtags, `mtags-java`, `mtags-protobuf`)
   .enablePlugins(BuildInfoPlugin)
 
@@ -811,6 +878,7 @@ lazy val `metals-mcp` = project
     moduleName := "metals-mcp",
     Compile / mainClass := Some("scala.meta.metals.McpMain"),
     Compile / run / javaOptions ++= sharedJavaOptions,
+    scala3With213Mtags,
   )
   .dependsOn(metals)
 
@@ -844,6 +912,7 @@ lazy val input = project
   .in(file("tests/input"))
   .settings(
     sharedSettings,
+    onScala213,
     scalacOptions -= "-Xsource:3",
     publish / skip := true,
     Compile / unmanagedJars ++= List(
@@ -1006,14 +1075,21 @@ lazy val mtest = project
         "com.outr" %% "scribe-slf4j2" % V.scribe(scalaVersion.value),
         "io.get-coursier" % "interface" % V.coursierInterfaces,
       ),
-    dependencyOverrides += "org.scala-lang" % "scala-library" % scalaVersion.value,
+    dependencyOverrides += "org.scala-lang" % "scala-library" % {
+      if (isScala3(CrossVersion.partialVersion(scalaVersion.value))) V.scala213
+      else scalaVersion.value
+    },
     buildInfoPackage := "tests",
     buildInfoObject := "BuildInfoVersions",
     buildInfoKeys := Seq[BuildInfoKey](
       "scala212" -> V.scala212,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
-      "scalaVersion" -> scalaVersion.value,
+      "scalaVersion" -> {
+        if (isScala3(CrossVersion.partialVersion(scalaVersion.value)))
+          V.scala213
+        else scalaVersion.value
+      },
       "kindProjector" -> V.kindProjector,
       "betterMonadicFor" -> V.betterMonadicFor,
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
@@ -1025,6 +1101,7 @@ lazy val mtest = project
       scalaVersion.value,
     ),
   )
+  .settings(scala3With213Mtags)
   .dependsOn(mtags, `semanticdb-javac`)
   .enablePlugins(BuildInfoPlugin)
 
@@ -1034,6 +1111,7 @@ lazy val cross = project
     testSettings,
     sharedSettings,
     crossScalaVersions := V.supportedScalaVersions,
+    scala3With213Mtags,
   )
   .dependsOn(mtest)
 
@@ -1058,6 +1136,7 @@ lazy val javapc = project
       "com.outr" %% "scribe-slf4j2" % V.scribe,
     ),
     Compile / resourceGenerators += packageJavaHeaderCompiler,
+    scala3With213Mtags,
   )
   .dependsOn(mtest, `mtags-java`)
 
@@ -1070,6 +1149,7 @@ lazy val protopc = project
       "com.outr" %% "scribe" % V.scribe,
       "com.outr" %% "scribe-slf4j2" % V.scribe,
     ),
+    scala3With213Mtags,
   )
   .dependsOn(mtest, `mtags-protobuf`)
 
@@ -1095,6 +1175,7 @@ def isInTestShard(name: String): Boolean = {
 lazy val metalsDependencies = project
   .in(file("target/.dependencies"))
   .settings(
+    onScala213,
     publish / skip := true,
     // silent the intransitive dependency warning
     publishMavenStyle := false,
@@ -1129,6 +1210,7 @@ lazy val unit = project
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "org.scalameta" %% "munit" % V.munit,
     ),
+    scala3With213Mtags,
     buildInfoPackage := "tests",
     Compile / resourceGenerators += InputProperties
       .resourceGenerator(input, input3),
@@ -1142,7 +1224,7 @@ lazy val unit = project
       "sourceroot" -> (ThisBuild / baseDirectory).value,
       "targetDirectory" -> (Test / target).value,
       "testResourceDirectory" -> (Test / resourceDirectory).value,
-      "scalaVersion" -> scalaVersion.value,
+      "scalaVersion" -> V.scala213,
     ),
   )
   .dependsOn(mtest, metals)
@@ -1171,6 +1253,7 @@ lazy val slow = project
       )
       .value,
   )
+  .settings(scala3With213Mtags)
   .dependsOn(unit, `metals-mcp`)
 
 lazy val bench = project
@@ -1178,14 +1261,15 @@ lazy val bench = project
   .enablePlugins(BuildInfoPlugin)
   .settings(
     sharedSettings,
+    scala3With213Mtags,
     run / fork := true,
     publish / skip := true,
     moduleName := "metals-bench",
     buildInfoKeys := Seq[BuildInfoKey](scalaVersion),
     libraryDependencies ++= List(
       ("org.scalameta" % "semanticdb-scalac" % V.semanticdb(
-        scalaVersion.value
-      )).cross(CrossVersion.full)
+        V.scala213
+      )).cross(CrossVersion.constant(V.scala213))
     ),
     buildInfoPackage := "bench",
     libraryDependencies ++= List(
@@ -1200,6 +1284,8 @@ lazy val bench = project
   )
   .dependsOn(unit)
   .enablePlugins(JmhPlugin)
+  // TODO: bench does not compile on Scala 3 yet (sourcecode.Pkg in scribe calls)
+  .disablePlugins(ScalafixPlugin)
 
 lazy val docs = project
   .in(file("metals-docs"))
@@ -1207,6 +1293,7 @@ lazy val docs = project
     sharedSettings,
     publish / skip := true,
     moduleName := "metals-docs",
+    scala3With213Mtags,
     mdoc := (Compile / run).evaluated,
     dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.18.8",
     buildInfoPackage := "docs",

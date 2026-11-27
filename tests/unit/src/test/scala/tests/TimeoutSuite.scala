@@ -86,7 +86,7 @@ object ExampleFutures {
     val future =
       CompletableFuture.runAsync(
         new Runnable {
-          def run() = while (!promise.isCompleted) {
+          def run(): Unit = while (!promise.isCompleted) {
             Thread.sleep(timeStep)
           }
         }
