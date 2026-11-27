@@ -121,6 +121,11 @@ jobs:
             name: Scala javapc tests
             os: ubuntu-latest
             java: "17"
+          - type: mtags-kotlin
+            command: sbt kotlinpc/test
+            name: Kotlin presentation compiler tests
+            os: ubuntu-latest
+            java: "17"
           - type: maven-metals
             command: |
               sbt maven-metals/test

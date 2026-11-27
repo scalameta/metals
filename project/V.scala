@@ -44,6 +44,10 @@ object V {
   val gradleBloop = "1.6.4"
 
   val gradleToolingApi = "9.5.1"
+  // Dokka's bundle of the Kotlin Analysis API (compiler 2.5.0-dev-3229).
+  val kotlinAnalysisApi = "2.3.0"
+  val kotlin = "2.3.0"
+  val kotlinxCoroutines = "1.10.2"
 
   val java8Compat = "1.0.2"
 
