@@ -11,6 +11,8 @@ final case class Number(value: String) extends SQLToken
 final case class Operator(value: String) extends SQLToken
 final case class Whitespace(value: String) extends SQLToken
 final case class Other(value: String) extends SQLToken
+final case class Comment(value: String, isClosed: Boolean, isBlock: Boolean)
+    extends SQLToken
 
 object SQLTokenizer {
   private val keywords = Set(
@@ -54,6 +56,8 @@ object SQLTokenizer {
         loop(updatedTokenBuffer, tail)
       case LiteralExtractor(updatedTokenBuffer, tail) =>
         loop(updatedTokenBuffer, tail)
+      case CommentExtractor(updatedTokenBuffer, tail) =>
+        loop(updatedTokenBuffer, tail)
       case OperatorExtractor(updatedTokenBuffer, tail) =>
         loop(updatedTokenBuffer, tail)
       case (tokenBuffer, ch :: tail) =>
@@ -70,6 +74,8 @@ object SQLTokenizer {
           .extract(tokenBuffer, text.toList, isLiteralContinuation = true)
           .map(loop)
           .getOrElse(Nil)
+      case Some(Comment(_, false, isBlock)) =>
+        loop(CommentExtractor.continue(tokenBuffer, text.toList, isBlock))
       case _ => loop((tokenBuffer, text.toList))
     }
   }
@@ -195,6 +201,75 @@ object SQLTokenizer {
             tokenBuffer += Literal(tokenBuilder.result(), isClosed = false)
             Some((tokenBuffer, chars))
           case _ => None
+        }
+
+      loop(chars)
+    }
+  }
+
+  /**
+   * A `-- line comment`, which ends before the next newline, or a
+   * `/* block comment */`. If the part ends before the comment closes,
+   * `tokenize` continues it in the next part.
+   */
+  private object CommentExtractor {
+    def unapply(
+        tokenBufferAndChars: (ListBuffer[SQLToken], List[Char])
+    ): Option[(ListBuffer[SQLToken], List[Char])] = {
+      val (tokenBuffer, chars) = tokenBufferAndChars
+
+      chars match {
+        case '-' :: '-' :: tail =>
+          Some(read(tokenBuffer, tail, isBlock = false, opening = "--"))
+        case '/' :: '*' :: tail =>
+          Some(read(tokenBuffer, tail, isBlock = true, opening = "/*"))
+        case _ => None
+      }
+    }
+
+    def continue(
+        tokenBuffer: ListBuffer[SQLToken],
+        chars: List[Char],
+        isBlock: Boolean,
+    ): (ListBuffer[SQLToken], List[Char]) =
+      read(tokenBuffer, chars, isBlock, opening = "")
+
+    private def read(
+        tokenBuffer: ListBuffer[SQLToken],
+        chars: List[Char],
+        isBlock: Boolean,
+        opening: String,
+    ): (ListBuffer[SQLToken], List[Char]) = {
+      val tokenBuilder = new StringBuilder(opening)
+
+      @scala.annotation.tailrec
+      def loop(chars: List[Char]): (ListBuffer[SQLToken], List[Char]) =
+        chars match {
+          case '*' :: '/' :: tail if isBlock =>
+            tokenBuilder.addAll("*/")
+            tokenBuffer += Comment(
+              tokenBuilder.result(),
+              isClosed = true,
+              isBlock = isBlock,
+            )
+            (tokenBuffer, tail)
+          case '\n' :: _ if !isBlock =>
+            tokenBuffer += Comment(
+              tokenBuilder.result(),
+              isClosed = true,
+              isBlock = isBlock,
+            )
+            (tokenBuffer, chars)
+          case ch :: tail =>
+            tokenBuilder.addOne(ch)
+            loop(tail)
+          case Nil =>
+            tokenBuffer += Comment(
+              tokenBuilder.result(),
+              isClosed = false,
+              isBlock = isBlock,
+            )
+            (tokenBuffer, Nil)
         }
 
       loop(chars)

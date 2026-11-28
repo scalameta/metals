@@ -216,6 +216,8 @@ object SemanticTokensProvider {
         emitToken(value, getTypeId(SemanticTokenTypes.Operator))
       case Literal(value, _) =>
         emitToken(value, getTypeId(SemanticTokenTypes.String))
+      case Comment(value, _, _) =>
+        emitToken(value, getTypeId(SemanticTokenTypes.Comment))
       case Whitespace(value) => emitToken(value, -1)
       case Other(value) => emitToken(value, -1)
     }
