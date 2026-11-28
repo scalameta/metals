@@ -161,4 +161,51 @@ class SQLTokenizerSuite extends BaseSuite {
     assertEquals(obtained, expected)
   }
 
+  test("prefixed-literals") {
+    val obtained = SQLTokenizer.tokenize("r'a' B'0' n'c' X'0F' rb'd' xy'e'")
+
+    val expected = List[SQLToken](
+      Literal("r'a'", isClosed = true),
+      Whitespace(" "),
+      Literal("B'0'", isClosed = true),
+      Whitespace(" "),
+      Literal("n'c'", isClosed = true),
+      Whitespace(" "),
+      Literal("X'0F'", isClosed = true),
+      Whitespace(" "),
+      Literal("rb'd'", isClosed = true),
+      Whitespace(" "),
+      Identifier("xy"),
+      Literal("'e'", isClosed = true),
+    )
+
+    assertEquals(obtained, expected)
+  }
+
+  test("escape-literals") {
+    val obtained = SQLTokenizer.tokenize("E'it\\'s' 'C:\\'")
+
+    val expected = List[SQLToken](
+      Literal("E'it\\'s'", isClosed = true, isEscaped = true),
+      Whitespace(" "),
+      Literal("'C:\\'", isClosed = true),
+    )
+
+    assertEquals(obtained, expected)
+  }
+
+  test("escape-literal-continues-after-a-splice") {
+    val lastToken = Literal("E'it", isClosed = false, isEscaped = true)
+
+    val obtained = SQLTokenizer.tokenize("\\'s' AND", Some(lastToken))
+
+    val expected = List[SQLToken](
+      Literal("\\'s'", isClosed = true, isEscaped = true),
+      Whitespace(" "),
+      Keyword("AND"),
+    )
+
+    assertEquals(obtained, expected)
+  }
+
 }

@@ -1,12 +1,18 @@
 package scala.meta.internal.metals
 
+import java.util.Locale
+
 import scala.collection.mutable.ListBuffer
 
 sealed trait SQLToken
 final case class Keyword(value: String) extends SQLToken
 final case class Identifier(value: String) extends SQLToken
 final case class Function(value: String) extends SQLToken
-final case class Literal(value: String, isClosed: Boolean) extends SQLToken
+final case class Literal(
+    value: String,
+    isClosed: Boolean,
+    isEscaped: Boolean = false,
+) extends SQLToken
 final case class Number(value: String) extends SQLToken
 final case class Operator(value: String) extends SQLToken
 final case class Whitespace(value: String) extends SQLToken
@@ -56,6 +62,8 @@ object SQLTokenizer {
     ): List[SQLToken] = tokenBufferAndChars match {
       case WhitespaceExtractor(updatedTokenBuffer, tail) =>
         loop(updatedTokenBuffer, tail)
+      case LiteralExtractor(updatedTokenBuffer, tail) =>
+        loop(updatedTokenBuffer, tail)
       case QuotedIdentifierExtractor(updatedTokenBuffer, tail) =>
         loop(updatedTokenBuffer, tail)
       case ParameterExtractor(updatedTokenBuffer, tail) =>
@@ -63,8 +71,6 @@ object SQLTokenizer {
       case IdentifierOrKeywordOrFunctionExtractor(updatedTokenBuffer, tail) =>
         loop(updatedTokenBuffer, tail)
       case NumberExtractor(updatedTokenBuffer, tail) =>
-        loop(updatedTokenBuffer, tail)
-      case LiteralExtractor(updatedTokenBuffer, tail) =>
         loop(updatedTokenBuffer, tail)
       case CommentExtractor(updatedTokenBuffer, tail) =>
         loop(updatedTokenBuffer, tail)
@@ -79,8 +85,8 @@ object SQLTokenizer {
     val tokenBuffer = new ListBuffer[SQLToken]()
 
     lastToken match {
-      case Some(Literal(_, false)) =>
-        loop(LiteralExtractor.continue(tokenBuffer, text.toList))
+      case Some(Literal(_, false, isEscaped)) =>
+        loop(LiteralExtractor.continue(tokenBuffer, text.toList, isEscaped))
       case Some(QuotedIdentifier(_, false, quote)) =>
         loop(
           QuotedIdentifierExtractor.continue(tokenBuffer, text.toList, quote)
@@ -180,19 +186,24 @@ object SQLTokenizer {
   }
 
   /**
-   * Reads up to and including the closing `quote`. Returns the text read,
-   * whether the quote closed it, and the rest of the part. If the part ends
-   * before the quote, `tokenize` continues the token in the next part.
+   * Reads up to and including the closing `quote`, where with `isEscaped` a
+   * backslash escapes the next character. Returns the text read, whether the
+   * quote closed it, and the rest of the part. If the part ends before the
+   * quote, `tokenize` continues the token in the next part.
    */
   private def readQuoted(
       chars: List[Char],
       quote: Char,
+      isEscaped: Boolean = false,
   ): (String, Boolean, List[Char]) = {
     val tokenBuilder = new StringBuilder()
 
     @scala.annotation.tailrec
     def loop(chars: List[Char]): (String, Boolean, List[Char]) =
       chars match {
+        case '\\' :: ch :: tail if isEscaped =>
+          tokenBuilder.addOne('\\').addOne(ch)
+          loop(tail)
         case `quote` :: tail =>
           tokenBuilder.addOne(quote)
           (tokenBuilder.result(), true, tail)
@@ -205,29 +216,51 @@ object SQLTokenizer {
     loop(chars)
   }
 
-  /** A string literal: `'a'`. */
+  /**
+   * A string literal, optionally with a prefix: raw, bytes or bit string
+   * (`r'a'`, `b'a'`, `rb'a'`), escape (`e'a'`, where a backslash escapes the
+   * next character), national character (`n'a'`) or hex (`x'0f'`).
+   */
   private object LiteralExtractor {
+    private val prefixes = Set("r", "b", "rb", "br", "e", "n", "x")
+
     def unapply(
         tokenBufferAndChars: (ListBuffer[SQLToken], List[Char])
-    ): Option[(ListBuffer[SQLToken], List[Char])] =
-      tokenBufferAndChars match {
-        case (tokenBuffer, '\'' :: tail) => Some(read(tokenBuffer, tail, "'"))
+    ): Option[(ListBuffer[SQLToken], List[Char])] = {
+      val (tokenBuffer, chars) = tokenBufferAndChars
+
+      def isPrefix(prefix: String) = prefixes(prefix.toLowerCase(Locale.ROOT))
+
+      chars match {
+        case '\'' :: tail =>
+          Some(read(tokenBuffer, tail, "'", isEscaped = false))
+        case p :: '\'' :: tail if isPrefix(p.toString) =>
+          Some(read(tokenBuffer, tail, s"$p'", isEscaped = p.toLower == 'e'))
+        case p1 :: p2 :: '\'' :: tail if isPrefix(s"$p1$p2") =>
+          Some(read(tokenBuffer, tail, s"$p1$p2'", isEscaped = false))
         case _ => None
       }
+    }
 
     def continue(
         tokenBuffer: ListBuffer[SQLToken],
         chars: List[Char],
+        isEscaped: Boolean,
     ): (ListBuffer[SQLToken], List[Char]) =
-      read(tokenBuffer, chars, opening = "")
+      read(tokenBuffer, chars, opening = "", isEscaped)
 
     private def read(
         tokenBuffer: ListBuffer[SQLToken],
         chars: List[Char],
         opening: String,
+        isEscaped: Boolean,
     ): (ListBuffer[SQLToken], List[Char]) = {
-      val (text, isClosed, rest) = readQuoted(chars, '\'')
-      tokenBuffer += Literal(opening + text, isClosed = isClosed)
+      val (text, isClosed, rest) = readQuoted(chars, '\'', isEscaped)
+      tokenBuffer += Literal(
+        opening + text,
+        isClosed = isClosed,
+        isEscaped = isEscaped,
+      )
       (tokenBuffer, rest)
     }
   }
