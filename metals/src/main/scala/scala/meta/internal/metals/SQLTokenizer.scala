@@ -70,10 +70,7 @@ object SQLTokenizer {
 
     lastToken match {
       case Some(Literal(_, false)) =>
-        LiteralExtractor
-          .extract(tokenBuffer, text.toList, isLiteralContinuation = true)
-          .map(loop)
-          .getOrElse(Nil)
+        loop(LiteralExtractor.continue(tokenBuffer, text.toList))
       case Some(Comment(_, false, isBlock)) =>
         loop(CommentExtractor.continue(tokenBuffer, text.toList, isBlock))
       case _ => loop((tokenBuffer, text.toList))
@@ -168,42 +165,56 @@ object SQLTokenizer {
     }
   }
 
+  /**
+   * Reads up to and including the closing `quote`. Returns the text read,
+   * whether the quote closed it, and the rest of the part. If the part ends
+   * before the quote, `tokenize` continues the token in the next part.
+   */
+  private def readQuoted(
+      chars: List[Char],
+      quote: Char,
+  ): (String, Boolean, List[Char]) = {
+    val tokenBuilder = new StringBuilder()
+
+    @scala.annotation.tailrec
+    def loop(chars: List[Char]): (String, Boolean, List[Char]) =
+      chars match {
+        case `quote` :: tail =>
+          tokenBuilder.addOne(quote)
+          (tokenBuilder.result(), true, tail)
+        case ch :: tail =>
+          tokenBuilder.addOne(ch)
+          loop(tail)
+        case Nil => (tokenBuilder.result(), false, Nil)
+      }
+
+    loop(chars)
+  }
+
+  /** A string literal: `'a'`. */
   private object LiteralExtractor {
     def unapply(
         tokenBufferAndChars: (ListBuffer[SQLToken], List[Char])
     ): Option[(ListBuffer[SQLToken], List[Char])] =
-      extract(
-        tokenBuffer = tokenBufferAndChars._1,
-        chars = tokenBufferAndChars._2,
-        isLiteralContinuation = false,
-      )
+      tokenBufferAndChars match {
+        case (tokenBuffer, '\'' :: tail) => Some(read(tokenBuffer, tail, "'"))
+        case _ => None
+      }
 
-    def extract(
+    def continue(
         tokenBuffer: ListBuffer[SQLToken],
         chars: List[Char],
-        isLiteralContinuation: Boolean,
-    ): Option[(ListBuffer[SQLToken], List[Char])] = {
-      val tokenBuilder = new StringBuilder()
+    ): (ListBuffer[SQLToken], List[Char]) =
+      read(tokenBuffer, chars, opening = "")
 
-      @scala.annotation.tailrec
-      def loop(chars: List[Char]): Option[(ListBuffer[SQLToken], List[Char])] =
-        chars match {
-          case '\'' :: tail if tokenBuilder.isEmpty && !isLiteralContinuation =>
-            tokenBuilder.addOne('\'')
-            loop(tail)
-          case '\'' :: tail if tokenBuilder.nonEmpty || isLiteralContinuation =>
-            tokenBuffer += Literal(tokenBuilder.result() + "'", isClosed = true)
-            Some((tokenBuffer, tail))
-          case ch :: tail if tokenBuilder.nonEmpty || isLiteralContinuation =>
-            tokenBuilder.addOne(ch)
-            loop(tail)
-          case _ if tokenBuilder.nonEmpty =>
-            tokenBuffer += Literal(tokenBuilder.result(), isClosed = false)
-            Some((tokenBuffer, chars))
-          case _ => None
-        }
-
-      loop(chars)
+    private def read(
+        tokenBuffer: ListBuffer[SQLToken],
+        chars: List[Char],
+        opening: String,
+    ): (ListBuffer[SQLToken], List[Char]) = {
+      val (text, isClosed, rest) = readQuoted(chars, '\'')
+      tokenBuffer += Literal(opening + text, isClosed = isClosed)
+      (tokenBuffer, rest)
     }
   }
 

@@ -2,6 +2,7 @@ package tests
 
 import scala.meta.internal.metals.Comment
 import scala.meta.internal.metals.Keyword
+import scala.meta.internal.metals.Literal
 import scala.meta.internal.metals.Number
 import scala.meta.internal.metals.SQLToken
 import scala.meta.internal.metals.SQLTokenizer
@@ -62,6 +63,30 @@ class SQLTokenizerSuite extends BaseSuite {
       Whitespace(" "),
       Comment("/* a", isClosed = false, isBlock = true),
     )
+
+    assertEquals(obtained, expected)
+  }
+
+  test("literal-continues-after-a-splice") {
+    val lastToken = Literal("'prefix-", isClosed = false)
+
+    val obtained = SQLTokenizer.tokenize("-suffix' AND", Some(lastToken))
+
+    val expected = List[SQLToken](
+      Literal("-suffix'", isClosed = true),
+      Whitespace(" "),
+      Keyword("AND"),
+    )
+
+    assertEquals(obtained, expected)
+  }
+
+  test("literal-stays-open-across-an-empty-part") {
+    val lastToken = Literal("'a", isClosed = false)
+
+    val obtained = SQLTokenizer.tokenize("", Some(lastToken))
+
+    val expected = List[SQLToken](Literal("", isClosed = false))
 
     assertEquals(obtained, expected)
   }
