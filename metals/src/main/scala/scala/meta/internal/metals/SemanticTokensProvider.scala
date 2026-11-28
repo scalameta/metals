@@ -197,11 +197,8 @@ object SemanticTokensProvider {
       tk: SQLToken,
       delta: Line,
   ): (List[Integer], Line) = {
-    def emitToken(token: String, tokenTypeId: Int) = convertTokensToIntList(
-      token,
-      delta,
-      tokenTypeId,
-    )
+    def emitToken(token: String, tokenTypeId: Int, tokenModifier: Int = 0) =
+      convertTokensToIntList(token, delta, tokenTypeId, tokenModifier)
 
     tk match {
       case Keyword(value) =>
@@ -214,8 +211,18 @@ object SemanticTokensProvider {
         emitToken(value, getTypeId(SemanticTokenTypes.Number))
       case Operator(value) =>
         emitToken(value, getTypeId(SemanticTokenTypes.Operator))
-      case Literal(value, _) =>
+      case Literal(value, _, _) =>
         emitToken(value, getTypeId(SemanticTokenTypes.String))
+      case Comment(value, _, _) =>
+        emitToken(value, getTypeId(SemanticTokenTypes.Comment))
+      case Parameter(value) =>
+        emitToken(
+          value,
+          getTypeId(SemanticTokenTypes.Variable),
+          1 << getModifierId(SemanticTokenModifiers.Readonly),
+        )
+      case QuotedIdentifier(value, _, _) =>
+        emitToken(value, getTypeId(SemanticTokenTypes.Variable))
       case Whitespace(value) => emitToken(value, -1)
       case Other(value) => emitToken(value, -1)
     }

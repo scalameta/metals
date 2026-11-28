@@ -371,6 +371,57 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
   )
 
   check(
+    "doobie-sql-comments",
+    s"""|<<import>>/*keyword*/ <<doobie>>/*namespace*/.<<implicits>>/*class*/.<<_>>/*variable,readonly*/
+        |
+        |<<object>>/*keyword*/ <<SQL>>/*class*/ {
+        |  <<val>>/*keyword*/ <<query>>/*variable,definition,readonly*/ = <<fr>>/*keyword*/<<\"\"\">>/*string*/<<-- Users older than 30, as 'a' group by age>>/*comment*/
+        |    <<SELECT>>/*keyword*/ <</* all the columns */>>/*comment*/ <<*>>/*operator*/ <<FROM>>/*keyword*/ <<users>>/*variable*/ <<-- the table>>/*comment*/
+        |    <<WHERE>>/*keyword*/ <<age>>/*variable*/ <<>>>/*operator*/ <<30>>/*number*/<<\"\"\">>/*string*/
+        |}
+        |""".stripMargin,
+    libraryDependencies = List("org.tpolecat::doobie-core:1.0.0-RC2"),
+  )
+
+  check(
+    "doobie-sql-comment-with-splice",
+    s"""|<<import>>/*keyword*/ <<doobie>>/*namespace*/.<<implicits>>/*class*/.<<_>>/*variable,readonly*/
+        |
+        |<<object>>/*keyword*/ <<SQL>>/*class*/ {
+        |  <<val>>/*keyword*/ <<age>>/*variable,definition,readonly*/ = <<30>>/*number*/
+        |  <<val>>/*keyword*/ <<query>>/*variable,definition,readonly*/ = <<fr>>/*keyword*/<<\"\"\">>/*string*/<<SELECT>>/*keyword*/ <<*>>/*operator*/ <<FROM>>/*keyword*/ <<users>>/*variable*/ <<-- older than >>/*comment*/<<$$>>/*keyword*/<<age>>/*variable,readonly*/<< and more>>/*comment*/
+        |    <<WHERE>>/*keyword*/ <<age>>/*variable*/ <<>>>/*operator*/ <<$$>>/*keyword*/<<age>>/*variable,readonly*/<<\"\"\">>/*string*/
+        |}
+        |""".stripMargin,
+    libraryDependencies = List("org.tpolecat::doobie-core:1.0.0-RC2"),
+  )
+
+  check(
+    "doobie-sql-multiline-block-comment",
+    s"""|<<import>>/*keyword*/ <<doobie>>/*namespace*/.<<implicits>>/*class*/.<<_>>/*variable,readonly*/
+        |
+        |<<object>>/*keyword*/ <<SQL>>/*class*/ {
+        |  <<val>>/*keyword*/ <<query>>/*variable,definition,readonly*/ = <<fr>>/*keyword*/<<\"\"\">>/*string*/<</* select all>>/*comment*/
+        |<<    from users */>>/*comment*/ <<SELECT>>/*keyword*/ <<*>>/*operator*/ <<FROM>>/*keyword*/ <<users>>/*variable*/<<\"\"\">>/*string*/
+        |}
+        |""".stripMargin,
+    libraryDependencies = List("org.tpolecat::doobie-core:1.0.0-RC2"),
+  )
+
+  check(
+    "doobie-sql-parameters-and-quoted-identifiers",
+    s"""|<<import>>/*keyword*/ <<doobie>>/*namespace*/.<<implicits>>/*class*/.<<_>>/*variable,readonly*/
+        |
+        |<<object>>/*keyword*/ <<SQL>>/*class*/ {
+        |  <<val>>/*keyword*/ <<table>>/*variable,definition,readonly*/ = <<"events">>/*string*/
+        |  <<val>>/*keyword*/ <<query>>/*variable,definition,readonly*/ = <<sql>>/*keyword*/<<\"\"\">>/*string*/<<SELECT>>/*keyword*/ <<*>>/*operator*/ <<FROM>>/*keyword*/ <<`project.>>/*variable*/<<$$>>/*keyword*/<<table>>/*variable,readonly*/<<`>>/*variable*/
+        |    <<WHERE>>/*keyword*/ <<id>>/*variable*/ <<IN>>/*keyword*/ <<UNNEST>>/*function*/(<<@ids>>/*variable,readonly*/)<<\"\"\">>/*string*/
+        |}
+        |""".stripMargin,
+    libraryDependencies = List("org.tpolecat::doobie-core:1.0.0-RC2"),
+  )
+
+  check(
     "into-soft-keyword",
     """|<<import>>/*keyword*/ <<scala>>/*namespace*/.<<language>>/*class*/.<<experimental>>/*class*/.<<into>>/*class,deprecated*/
        |
