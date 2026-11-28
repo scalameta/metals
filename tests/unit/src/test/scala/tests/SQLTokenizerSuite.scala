@@ -208,4 +208,58 @@ class SQLTokenizerSuite extends BaseSuite {
     assertEquals(obtained, expected)
   }
 
+  test("strip-margin-margin-is-not-an-operator") {
+    val obtained = SQLTokenizer.tokenize("|SELECT 1\n    |  | 2")
+
+    val expected = List[SQLToken](
+      Other("|"),
+      Keyword("SELECT"),
+      Whitespace(" "),
+      Number("1"),
+      Whitespace("\n    "),
+      Other("|"),
+      Whitespace("  "),
+      Operator("|"),
+      Whitespace(" "),
+      Number("2"),
+    )
+
+    assertEquals(obtained, expected)
+  }
+
+  test("margin-is-only-at-the-start-of-the-interpolation") {
+    val obtained =
+      SQLTokenizer.tokenize("| 2", Some(Identifier("a")))
+
+    val expected = List[SQLToken](
+      Operator("|"),
+      Whitespace(" "),
+      Number("2"),
+    )
+
+    assertEquals(obtained, expected)
+  }
+
+  test("keywords-types-and-operators") {
+    val obtained = SQLTokenizer.tokenize("EXPORT DATA a ^ b || INT64")
+
+    val expected = List[SQLToken](
+      Keyword("EXPORT"),
+      Whitespace(" "),
+      Keyword("DATA"),
+      Whitespace(" "),
+      Identifier("a"),
+      Whitespace(" "),
+      Operator("^"),
+      Whitespace(" "),
+      Identifier("b"),
+      Whitespace(" "),
+      Operator("||"),
+      Whitespace(" "),
+      Keyword("INT64"),
+    )
+
+    assertEquals(obtained, expected)
+  }
+
 }

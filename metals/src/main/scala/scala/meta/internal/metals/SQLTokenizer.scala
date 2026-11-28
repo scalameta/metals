@@ -37,12 +37,20 @@ object SQLTokenizer {
     "table", "primary", "key", "foreign", "references", "unique", "check",
     "default", "drop", "alter", "add", "rename", "truncate", "set", "values",
     "into", "index", "view", "with", "recursive", "materialized", "cascade",
-    "restrict", "window", "partition", "over",
+    "restrict", "window", "partition", "over", "using", "natural", "cross",
+    "lateral", "temp", "temporary", "function", "returns", "replace", "qualify",
+    "rows", "unbounded", "preceding", "following", "nulls", "filter", "within",
+    "grouping", "rollup", "cube", "returning", "conflict", "do", "nothing",
+    "declare", "execute", "immediate", "merge", "matched", "export", "data",
+    "options", "pivot", "unpivot", "tablesample", "year", "month", "day",
+    "hour", "minute", "second",
 
     // Types
     "int", "integer", "smallint", "bigint", "float", "real", "double",
     "boolean", "date", "time", "timestamp", "interval", "text", "json", "jsonb",
-    "uuid",
+    "uuid", "string", "int64", "float64", "numeric", "bignumeric", "decimal",
+    "bool", "bytes", "datetime", "geography", "varchar", "char", "bytea",
+    "timestamptz", "array", "struct",
 
     // Boolean values
     "true", "false",
@@ -50,12 +58,14 @@ object SQLTokenizer {
 
   private val operators =
     Set("=", "<", ">", "<=", ">=", "<>", "!=", "+", "-", "*", "/", "%", "->>",
-      "::", "$", "@@", "@>", "<@", "@?")
+      "::", "$", "@@", "@>", "<@", "@?", "^", "<<", ">>", "&", "~", "|", "||")
 
   def tokenize(
       text: String,
       lastToken: Option[SQLToken] = None,
   ): List[SQLToken] = {
+    val isStart = lastToken.isEmpty
+
     @scala.annotation.tailrec
     def loop(
         tokenBufferAndChars: (ListBuffer[SQLToken], List[Char])
@@ -74,6 +84,9 @@ object SQLTokenizer {
         loop(updatedTokenBuffer, tail)
       case CommentExtractor(updatedTokenBuffer, tail) =>
         loop(updatedTokenBuffer, tail)
+      case (tokenBuffer, '|' :: tail) if isMargin(tokenBuffer, isStart) =>
+        tokenBuffer += Other("|")
+        loop(tokenBuffer, tail)
       case OperatorExtractor(updatedTokenBuffer, tail) =>
         loop(updatedTokenBuffer, tail)
       case (tokenBuffer, ch :: tail) =>
@@ -96,6 +109,20 @@ object SQLTokenizer {
       case _ => loop((tokenBuffer, text.toList))
     }
   }
+
+  /**
+   * A `|` that starts a line, or the interpolation, is a `stripMargin` margin.
+   */
+  private def isMargin(
+      tokenBuffer: ListBuffer[SQLToken],
+      isStart: Boolean,
+  ): Boolean =
+    tokenBuffer.lastOption match {
+      case Some(Whitespace(value)) =>
+        value.contains('\n') || isStart && tokenBuffer.size == 1
+      case None => isStart
+      case _ => false
+    }
 
   private object WhitespaceExtractor {
     def unapply(
@@ -143,7 +170,9 @@ object SQLTokenizer {
             Some((tokenBuffer, chars))
           case _ if tokenBuilder.nonEmpty =>
             val token = tokenBuilder.result()
-            tokenBuffer += (if (keywords.contains(token.toLowerCase()))
+            tokenBuffer += (if (
+                              keywords.contains(token.toLowerCase(Locale.ROOT))
+                            )
                               Keyword(token)
                             else Identifier(token))
             Some((tokenBuffer, chars))
