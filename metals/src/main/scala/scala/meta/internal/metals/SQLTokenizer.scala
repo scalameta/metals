@@ -13,6 +13,12 @@ final case class Whitespace(value: String) extends SQLToken
 final case class Other(value: String) extends SQLToken
 final case class Comment(value: String, isClosed: Boolean, isBlock: Boolean)
     extends SQLToken
+final case class Parameter(value: String) extends SQLToken
+final case class QuotedIdentifier(
+    value: String,
+    isClosed: Boolean,
+    quote: Char,
+) extends SQLToken
 
 object SQLTokenizer {
   private val keywords = Set(
@@ -38,7 +44,7 @@ object SQLTokenizer {
 
   private val operators =
     Set("=", "<", ">", "<=", ">=", "<>", "!=", "+", "-", "*", "/", "%", "->>",
-      "::", "$")
+      "::", "$", "@@", "@>", "<@", "@?")
 
   def tokenize(
       text: String,
@@ -49,6 +55,10 @@ object SQLTokenizer {
         tokenBufferAndChars: (ListBuffer[SQLToken], List[Char])
     ): List[SQLToken] = tokenBufferAndChars match {
       case WhitespaceExtractor(updatedTokenBuffer, tail) =>
+        loop(updatedTokenBuffer, tail)
+      case QuotedIdentifierExtractor(updatedTokenBuffer, tail) =>
+        loop(updatedTokenBuffer, tail)
+      case ParameterExtractor(updatedTokenBuffer, tail) =>
         loop(updatedTokenBuffer, tail)
       case IdentifierOrKeywordOrFunctionExtractor(updatedTokenBuffer, tail) =>
         loop(updatedTokenBuffer, tail)
@@ -71,6 +81,10 @@ object SQLTokenizer {
     lastToken match {
       case Some(Literal(_, false)) =>
         loop(LiteralExtractor.continue(tokenBuffer, text.toList))
+      case Some(QuotedIdentifier(_, false, quote)) =>
+        loop(
+          QuotedIdentifierExtractor.continue(tokenBuffer, text.toList, quote)
+        )
       case Some(Comment(_, false, isBlock)) =>
         loop(CommentExtractor.continue(tokenBuffer, text.toList, isBlock))
       case _ => loop((tokenBuffer, text.toList))
@@ -215,6 +229,68 @@ object SQLTokenizer {
       val (text, isClosed, rest) = readQuoted(chars, '\'')
       tokenBuffer += Literal(opening + text, isClosed = isClosed)
       (tokenBuffer, rest)
+    }
+  }
+
+  /**
+   * An identifier quoted with backticks or double quotes:
+   * `` `project.dataset.table` ``, `"column"`.
+   */
+  private object QuotedIdentifierExtractor {
+    def unapply(
+        tokenBufferAndChars: (ListBuffer[SQLToken], List[Char])
+    ): Option[(ListBuffer[SQLToken], List[Char])] =
+      tokenBufferAndChars match {
+        case (tokenBuffer, (quote @ ('`' | '"')) :: tail) =>
+          Some(read(tokenBuffer, tail, quote, opening = quote.toString))
+        case _ => None
+      }
+
+    def continue(
+        tokenBuffer: ListBuffer[SQLToken],
+        chars: List[Char],
+        quote: Char,
+    ): (ListBuffer[SQLToken], List[Char]) =
+      read(tokenBuffer, chars, quote, opening = "")
+
+    private def read(
+        tokenBuffer: ListBuffer[SQLToken],
+        chars: List[Char],
+        quote: Char,
+        opening: String,
+    ): (ListBuffer[SQLToken], List[Char]) = {
+      val (text, isClosed, rest) = readQuoted(chars, quote)
+      tokenBuffer += QuotedIdentifier(
+        opening + text,
+        isClosed = isClosed,
+        quote = quote,
+      )
+      (tokenBuffer, rest)
+    }
+  }
+
+  /**
+   * A named query parameter, `@name`, or a system variable, `@@name`. A name
+   * followed by `(` is a function after an operator instead, as in
+   * PostgreSQL's `tsv @@to_tsquery('a')`.
+   */
+  private object ParameterExtractor {
+    def unapply(
+        tokenBufferAndChars: (ListBuffer[SQLToken], List[Char])
+    ): Option[(ListBuffer[SQLToken], List[Char])] = {
+      val (tokenBuffer, chars) = tokenBufferAndChars
+      val (at, tail) = chars.span(_ == '@')
+      val (name, rest) = tail.span(ch => ch.isLetterOrDigit || ch == '_')
+
+      val isParameter =
+        (at.length == 1 || at.length == 2) &&
+          name.headOption.exists(ch => ch.isLetter || ch == '_') &&
+          !rest.headOption.contains('(')
+
+      if (isParameter) {
+        tokenBuffer += Parameter(at.mkString + name.mkString)
+        Some((tokenBuffer, rest))
+      } else None
     }
   }
 

@@ -409,6 +409,19 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
   )
 
   check(
+    "doobie-sql-parameters-and-quoted-identifiers",
+    s"""|<<import>>/*keyword*/ <<doobie>>/*namespace*/.<<implicits>>/*class*/.<<_>>/*variable,readonly*/
+        |
+        |<<object>>/*keyword*/ <<SQL>>/*class*/ {
+        |  <<val>>/*keyword*/ <<table>>/*variable,definition,readonly*/ = <<"events">>/*string*/
+        |  <<val>>/*keyword*/ <<query>>/*variable,definition,readonly*/ = <<sql>>/*keyword*/<<\"\"\">>/*string*/<<SELECT>>/*keyword*/ <<*>>/*operator*/ <<FROM>>/*keyword*/ <<`project.>>/*variable*/<<$$>>/*keyword*/<<table>>/*variable,readonly*/<<`>>/*variable*/
+        |    <<WHERE>>/*keyword*/ <<id>>/*variable*/ <<IN>>/*keyword*/ <<UNNEST>>/*function*/(<<@ids>>/*variable,readonly*/)<<\"\"\">>/*string*/
+        |}
+        |""".stripMargin,
+    libraryDependencies = List("org.tpolecat::doobie-core:1.0.0-RC2"),
+  )
+
+  check(
     "into-soft-keyword",
     """|<<import>>/*keyword*/ <<scala>>/*namespace*/.<<language>>/*class*/.<<experimental>>/*class*/.<<into>>/*class,deprecated*/
        |

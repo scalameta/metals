@@ -1,9 +1,15 @@
 package tests
 
 import scala.meta.internal.metals.Comment
+import scala.meta.internal.metals.Function
+import scala.meta.internal.metals.Identifier
 import scala.meta.internal.metals.Keyword
 import scala.meta.internal.metals.Literal
 import scala.meta.internal.metals.Number
+import scala.meta.internal.metals.Operator
+import scala.meta.internal.metals.Other
+import scala.meta.internal.metals.Parameter
+import scala.meta.internal.metals.QuotedIdentifier
 import scala.meta.internal.metals.SQLToken
 import scala.meta.internal.metals.SQLTokenizer
 import scala.meta.internal.metals.Whitespace
@@ -87,6 +93,70 @@ class SQLTokenizerSuite extends BaseSuite {
     val obtained = SQLTokenizer.tokenize("", Some(lastToken))
 
     val expected = List[SQLToken](Literal("", isClosed = false))
+
+    assertEquals(obtained, expected)
+  }
+
+  test("parameters") {
+    val obtained = SQLTokenizer.tokenize("@ids, @@session_var")
+
+    val expected = List[SQLToken](
+      Parameter("@ids"),
+      Other(","),
+      Whitespace(" "),
+      Parameter("@@session_var"),
+    )
+
+    assertEquals(obtained, expected)
+  }
+
+  test("postgresql-at-operators-are-not-parameters") {
+    val obtained = SQLTokenizer.tokenize("tsv @@to_tsquery('a') AND a <@b")
+
+    val expected = List[SQLToken](
+      Identifier("tsv"),
+      Whitespace(" "),
+      Operator("@@"),
+      Function("to_tsquery"),
+      Other("("),
+      Literal("'a'", isClosed = true),
+      Other(")"),
+      Whitespace(" "),
+      Keyword("AND"),
+      Whitespace(" "),
+      Identifier("a"),
+      Whitespace(" "),
+      Operator("<@"),
+      Identifier("b"),
+    )
+
+    assertEquals(obtained, expected)
+  }
+
+  test("quoted-identifiers") {
+    val obtained = SQLTokenizer.tokenize("`project.table` \"a--b\"")
+
+    val expected = List[SQLToken](
+      QuotedIdentifier("`project.table`", isClosed = true, quote = '`'),
+      Whitespace(" "),
+      QuotedIdentifier("\"a--b\"", isClosed = true, quote = '"'),
+    )
+
+    assertEquals(obtained, expected)
+  }
+
+  test("quoted-identifier-continues-after-a-splice") {
+    val lastToken = QuotedIdentifier("`", isClosed = false, quote = '`')
+
+    val obtained = SQLTokenizer.tokenize(".table` AS t", Some(lastToken))
+
+    val expected = List[SQLToken](
+      QuotedIdentifier(".table`", isClosed = true, quote = '`'),
+      Whitespace(" "),
+      Keyword("AS"),
+      Whitespace(" "),
+      Identifier("t"),
+    )
 
     assertEquals(obtained, expected)
   }
